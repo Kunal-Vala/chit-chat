@@ -1,9 +1,11 @@
 import { Request, Response } from 'express';
 import Jwt from "jsonwebtoken";
-import User from "../models/user";
+import { ZodError } from 'zod';
+import User from "../models/User";
 import { createHash } from "../lib/password";
 import { JWT_SECRET } from '../config/env';
 import { IUser } from '../types';
+import { toSignUpInput } from '../lib/validationSchema';
 
 
 interface SignUpBody {
@@ -14,7 +16,7 @@ interface SignUpBody {
 
 export const sign_up = async (req: Request<object, object, SignUpBody>, res: Response): Promise<Response> => {
     try {
-        const { username, email, password } = req.body;
+        const { username, email, password } = toSignUpInput(req.body);
 
         if (!username || !email || !password) {
             return res.status(400).json({ error: 'All fields are required' });
@@ -57,6 +59,17 @@ export const sign_up = async (req: Request<object, object, SignUpBody>, res: Res
             }
         });
     } catch (error) {
+
+        if (error instanceof ZodError) {
+            return res.status(400).json({
+                error: 'Validation failed',
+                details: error.issues.map(issue => ({
+                    field: issue.path.join('.'),
+                    message: issue.message
+                }))
+            });
+        }
+
         console.error('Signup error:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }
