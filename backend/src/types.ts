@@ -13,13 +13,17 @@ export interface IUser {
   updatedAt?: Date;
 }
 
-export interface JwtPayload {
+export interface JwtPayloadType {
   userId: string;
   email: string;
+  username: string;
 }
 
 export interface AuthenticatedRequest extends Request {
-  user?: JwtPayload;
+  user?: JwtPayloadType;
 }
 
-
+export interface SignInBody {
+  email: string;
+  password: string;
+}
