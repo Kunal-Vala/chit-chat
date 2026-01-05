@@ -30,6 +30,10 @@ const userSchema = new Schema<IUser>({
     },
     lastSeen: {
         type: Date,
+    },
+    tokenVersion: {
+        type: Number,
+        default: 0,
     }
 }, { timestamps: true });
 

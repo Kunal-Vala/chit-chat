@@ -9,6 +9,7 @@ export interface IUser {
   statusText?: string;
   onlineStatus?: boolean;
   lastSeen?: Date;
+  tokenVersion?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -17,6 +18,7 @@ export interface JwtPayloadType {
   userId: string;
   email: string;
   username: string;
+  tokenVersion: number;
 }
 
 export interface AuthenticatedRequest extends Request {
