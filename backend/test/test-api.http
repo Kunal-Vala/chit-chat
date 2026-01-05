@@ -1,0 +1,49 @@
+### Test API Endpoints for Chit-Chat Backend
+
+### Variables
+@baseUrl = http://localhost:3000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTViNWRlOGMwZjlkMDY2N2YwYTRjMzgiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJ1c2VybmFtZSI6InRlc3R1c2VyIiwidG9rZW5WZXJzaW9uIjoxLCJpYXQiOjE3Njc2MDQxMTksImV4cCI6MTc2NzY5MDUxOX0.ruCTB-GdnyJvPT5b7PWGsRHpLIcVS3dT7vu6jtveN7E
+
+### Health Check
+GET {{baseUrl}}/ping
+
+###
+### 1. Sign Up - Create a new user
+POST {{baseUrl}}/api/auth/sign_up
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "email": "test@example.com",
+  "password": "Password123!"
+}
+
+###
+### 2. Sign In - Login with existing user
+POST {{baseUrl}}/api/auth/sign_in
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Password123!"
+}
+
+###
+### 3. Verify Token - Check if token is valid
+GET {{baseUrl}}/api/auth/verify
+Authorization: Bearer {{token}}
+
+###
+### 4. Refresh Token - Get a new token
+POST {{baseUrl}}/api/auth/refresh
+Authorization: Bearer {{token}}
+
+###
+### 5. Logout - User logout
+POST {{baseUrl}}/api/auth/logout
+Authorization: Bearer {{token}}
+
+###
+### 6. Chat Route - Test protected chat route
+GET {{baseUrl}}/api/chat
+Authorization: Bearer {{token}}
