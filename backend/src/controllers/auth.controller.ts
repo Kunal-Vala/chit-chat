@@ -4,7 +4,7 @@ import { ZodError } from 'zod';
 import User from "../models/User";
 import { createHash, checkPassword } from "../lib/password";
 import { JWT_SECRET } from '../config/env';
-import { IUser, SignInBody } from '../types';
+import { IUser, SignInBody, AuthenticatedRequest } from '../types';
 import { toSignUpInput, toSignInInput } from '../lib/validationSchema';
 
 
@@ -39,6 +39,7 @@ export const sign_up = async (req: Request<object, object, SignUpBody>, res: Res
             userId: newUser._id.toString(),
             email: newUser.email,
             username: newUser.username,
+            tokenVersion: newUser.tokenVersion || 0,
         },
             JWT_SECRET,
             {
@@ -87,6 +88,7 @@ export const sign_in = async (req: Request<object, object, SignInBody>, res: Res
             userId: user._id.toString(),
             email: user.email,
             username: user.username,
+            tokenVersion: user.tokenVersion || 0,
         },
             JWT_SECRET,
             { 
@@ -115,6 +117,95 @@ export const sign_in = async (req: Request<object, object, SignInBody>, res: Res
             });
         }
         console.error('Signin error:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export const logout = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        // Increment tokenVersion to invalidate all existing tokens
+        await User.findByIdAndUpdate(req.user.userId, {
+            $inc: { tokenVersion: 1 }
+        });
+
+        return res.status(200).json({ 
+            message: 'Logged out successfully' 
+        });
+    } catch (error) {
+        console.error('Logout error:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export const refresh = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const user = await User.findById(req.user.userId);
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Generate new token
+        const token = Jwt.sign(
+            {
+                userId: user._id.toString(),
+                email: user.email,
+                username: user.username,
+                tokenVersion: user.tokenVersion || 0,
+            },
+            JWT_SECRET,
+            { 
+                expiresIn: '1d',
+                algorithm: 'HS256'
+            }
+        );
+
+        return res.status(200).json({
+            message: 'Token refreshed successfully',
+            token,
+            user: {
+                userId: user._id.toString(),
+                username: user.username,
+                email: user.email,
+            }
+        });
+    } catch (error) {
+        console.error('Token refresh error:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export const verify = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const user = await User.findById(req.user.userId);
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        return res.status(200).json({
+            valid: true,
+            user: {
+                userId: user._id.toString(),
+                username: user.username,
+                email: user.email,
+                onlineStatus: user.onlineStatus,
+            }
+        });
+    } catch (error) {
+        console.error('Token verification error:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }
 };

@@ -2,6 +2,7 @@ import { JwtPayloadType, AuthenticatedRequest } from "../types";
 import jwt from "jsonwebtoken";
 import { Response, NextFunction } from "express";
 import { JWT_SECRET } from "../config/env";
+import User from "../models/User";
 
 /**
  * Middleware function to authenticate incoming requests using JWT tokens.
@@ -25,7 +26,7 @@ import { JWT_SECRET } from "../config/env";
  * @example
  * app.use(authenticateUser);
  */
-export const authenticateUser = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const authenticateUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const authorizationHeader = req.headers.authorization;
 
@@ -49,10 +50,18 @@ export const authenticateUser = (req: AuthenticatedRequest, res: Response, next:
             algorithms: ['HS256']
         }) as JwtPayloadType;
 
+        // Verify tokenVersion matches database (token not invalidated)
+        const user = await User.findById(decoded.userId);
+        
+        if (!user || user.tokenVersion !== decoded.tokenVersion) {
+            return res.status(401).json({ message: "Token has been invalidated" });
+        }
+
         req.user = {
             userId: decoded.userId,
             email: decoded.email,
-            username: decoded.username
+            username: decoded.username,
+            tokenVersion: decoded.tokenVersion
         };
 
         return next();
