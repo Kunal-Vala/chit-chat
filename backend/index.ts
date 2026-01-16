@@ -1,7 +1,8 @@
 import express from 'express';
 import { connectDB } from './src/config/db';
-import { router as UserRouter } from './src/routes/auth.route';
+import { router as AuthRouter } from './src/routes/auth.route';
 import { router as ChatRouter } from './src/routes/chat.route';
+import { router as UserRouter } from './src/routes/user.route';
 import cors from "cors";
 import { FRONTEND } from './src/config/env';
 
@@ -22,7 +23,8 @@ app.use(cors({
 
 app.use(express.json());
 app.use('/api/chat', ChatRouter);
-app.use('/api/auth', UserRouter);
+app.use('/api/auth', AuthRouter);
+app.use('/api/user', UserRouter);
 
 const PORT = 3000;
 
