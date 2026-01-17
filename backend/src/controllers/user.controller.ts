@@ -242,10 +242,21 @@ export const sendFriendRequest = async (req: AuthenticatedRequest, res: Response
             return res.status(400).json({ error: 'Target user ID is required' });
         }
 
+        if (!targetUserId.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Invalid target user ID format' });
+        }
+
         if (currentUserId === targetUserId) {
             return res.status(400).json({ error: 'You cannot send a friend request to yourself' });
         }
 
+        // Check if target user exists
+        const targetUserExists = await User.findById(targetUserId);
+        if (!targetUserExists) {
+            return res.status(404).json({ error: 'Target user not found' });
+        }
+
+        // Check if already friends
         const alreadyFriends = await User.findOne({
             _id: currentUserId,
             friends: targetUserId
@@ -255,6 +266,7 @@ export const sendFriendRequest = async (req: AuthenticatedRequest, res: Response
             return res.status(400).json({ error: 'You are already friends with this user' });
         }
 
+        // Check if request already pending
         const existingRequest = await User.findOne({
             _id: targetUserId,
             'friendRequests.from': currentUserId,
@@ -276,13 +288,17 @@ export const sendFriendRequest = async (req: AuthenticatedRequest, res: Response
                 }
             },
             { new: true }
-        );
+        ).select('-password -tokenVersion');
 
-        if (!targetUser) {
-            return res.status(404).json({ error: 'Target user not found' });
-        }
-
-        return res.status(200).json({ user: targetUser, message: 'Friend request sent successfully' });
+        return res.status(200).json({
+            message: 'Friend request sent successfully',
+            user: targetUser,
+            friendRequest: {
+                from: currentUserId,
+                to: targetUserId,
+                status: 'pending'
+            }
+        });
 
     } catch (error) {
         console.error('Error sending friend request:', error);
@@ -294,52 +310,104 @@ export const sendFriendRequest = async (req: AuthenticatedRequest, res: Response
 export const acceptFriendRequest = async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
     try {
         const currentUserId = req.user?.userId;
-        const { requestId } = req.body;
+        const { requesterId } = req.body; // Changed from requestId to requesterId for clarity
+
         if (!currentUserId) {
             return res.status(401).json({ error: 'Unauthorized' });
         }
 
-        if (!requestId) {
-            return res.status(400).json({ error: 'Friend request ID is required' });
+        if (!requesterId) {
+            return res.status(400).json({ error: 'Requester ID is required' });
         }
 
-        await User.findByIdAndUpdate(currentUserId, {
-            $pull: { friendRequests: { from: requestId } },
-            $push: { friends: requestId }
+        if (!requesterId.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Invalid requester ID format' });
+        }
+
+        // Verify the friend request actually exists before accepting
+        const currentUser = await User.findById(currentUserId);
+        const friendRequestExists = currentUser?.friendRequests?.some(
+            req => req.from.toString() === requesterId && req.status === 'pending'
+        );
+
+        if (!friendRequestExists) {
+            return res.status(404).json({ error: 'Friend request not found or already processed' });
+        }
+
+        // Check if requester still exists
+        const requesterExists = await User.findById(requesterId);
+        if (!requesterExists) {
+            return res.status(404).json({ error: 'Requester user not found' });
+        }
+
+        // Accept the request - remove from friendRequests and add to friends
+        const updatedCurrentUser = await User.findByIdAndUpdate(
+            currentUserId,
+            {
+                $pull: { friendRequests: { from: requesterId, status: 'pending' } },
+                $addToSet: { friends: requesterId } // $addToSet prevents duplicates
+            },
+            { new: true }
+        ).select('-password -tokenVersion');
+
+        // Add current user to requester's friends
+        await User.findByIdAndUpdate(
+            requesterId,
+            {
+                $addToSet: { friends: currentUserId }
+            }
+        );
+
+        return res.status(200).json({
+            message: 'Friend request accepted successfully',
+            user: updatedCurrentUser
         });
-
-        await User.findByIdAndUpdate(requestId, {
-            $push: { friends: currentUserId }
-        });
-
-        return res.status(200).json({ message: 'Friend request accepted successfully' });
-
 
     } catch (error) {
         console.error('Error accepting friend request:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }
-
 };
 
 export const rejectFriendRequest = async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
     try {
         const currentUserId = req.user?.userId;
-        const { requestId } = req.body;
+        const { requesterId } = req.body; // Changed from requestId to requesterId
 
         if (!currentUserId) {
             return res.status(401).json({ error: 'Unauthorized' });
         }
 
-        if (!requestId) {
-            return res.status(400).json({ error: 'Friend request ID is required' });
+        if (!requesterId) {
+            return res.status(400).json({ error: 'Requester ID is required' });
         }
 
-        await User.findByIdAndUpdate(currentUserId, {
-            $pull: { friendRequests: { from: requestId } }
-        });
+        if (!requesterId.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Invalid requester ID format' });
+        }
 
-        return res.status(200).json({ message: 'Friend request rejected successfully' });
+        // Verify the friend request exists before rejecting
+        const currentUser = await User.findById(currentUserId);
+        const friendRequestExists = currentUser?.friendRequests?.some(
+            req => req.from.toString() === requesterId && req.status === 'pending'
+        );
+
+        if (!friendRequestExists) {
+            return res.status(404).json({ error: 'Friend request not found or already processed' });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            currentUserId,
+            {
+                $pull: { friendRequests: { from: requesterId, status: 'pending' } }
+            },
+            { new: true }
+        ).select('-password -tokenVersion');
+
+        return res.status(200).json({
+            message: 'Friend request rejected successfully',
+            user: updatedUser
+        });
     } catch (error) {
         console.error('Error rejecting friend request:', error);
         return res.status(500).json({ error: 'Internal server error' });
@@ -359,15 +427,48 @@ export const deleteFriend = async (req: AuthenticatedRequest, res: Response): Pr
             return res.status(400).json({ error: 'Friend ID is required' });
         }
 
-        await User.findByIdAndUpdate(currentUserId, {
-            $pull: { friends: friendId }
-        });
+        if (!friendId.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Invalid friend ID format' });
+        }
 
-        await User.findByIdAndUpdate(friendId, {
-            $pull: { friends: currentUserId }
-        });
+        if (currentUserId === friendId) {
+            return res.status(400).json({ error: 'You cannot remove yourself as a friend' });
+        }
 
-        return res.status(200).json({ message: 'Friend deleted successfully' });
+        // Verify friendship actually exists before deletion
+        const currentUser = await User.findById(currentUserId);
+        const friendshipExists = currentUser?.friends?.includes(friendId);
+
+        if (!friendshipExists) {
+            return res.status(404).json({ error: 'Friendship not found' });
+        }
+
+        // Check if friend user exists
+        const friendExists = await User.findById(friendId);
+        if (!friendExists) {
+            return res.status(404).json({ error: 'Friend user not found' });
+        }
+
+        // Remove friend from both users' lists
+        const updatedCurrentUser = await User.findByIdAndUpdate(
+            currentUserId,
+            {
+                $pull: { friends: friendId }
+            },
+            { new: true }
+        ).select('-password -tokenVersion');
+
+        await User.findByIdAndUpdate(
+            friendId,
+            {
+                $pull: { friends: currentUserId }
+            }
+        );
+
+        return res.status(200).json({
+            message: 'Friend deleted successfully',
+            user: updatedCurrentUser
+        });
 
     } catch (error) {
         console.error('Error deleting friend:', error);
