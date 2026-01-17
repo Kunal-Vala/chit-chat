@@ -1,6 +1,6 @@
 import { Router } from "express";
 export const router = Router();
-import { getUserById, updateUserProfile, searchUsersByUsername, uploadProfilePicture } from "../controllers/user.controller";
+import { getUserById, updateUserProfile, searchUsersByUsername, uploadProfilePicture,sendFriendRequest } from "../controllers/user.controller";
 import { authenticateUser } from "../middleware/auth.middleware";
 import multer from "multer";
 
@@ -53,3 +53,4 @@ router.get('/search', authenticateUser, searchUsersByUsername);
 router.get('/profile/:userid', authenticateUser, getUserById);
 router.put('/profile/:userid', authenticateUser, updateUserProfile);
 router.post('/profile/:userid/upload-picture', authenticateUser, upload.single('profilePicture'), uploadProfilePicture);
+router.post('/friend/request', authenticateUser, sendFriendRequest);

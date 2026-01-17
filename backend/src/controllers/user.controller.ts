@@ -45,7 +45,7 @@ export const uploadProfilePicture = async (req: AuthenticatedRequest, res: Respo
 
         // Check if file exists
         if (!req.file) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 error: 'No file provided or invalid file type',
                 allowedTypes: 'JPEG, JPG, PNG, GIF, WebP, SVG, BMP',
                 hint: 'Make sure the field name is "profilePicture" and the file is an image'
@@ -94,7 +94,7 @@ export const uploadProfilePicture = async (req: AuthenticatedRequest, res: Respo
 export const searchUsersByUsername = async (req: Request, res: Response): Promise<Response | void> => {
     try {
         const { q } = req.query;
-        
+
         if (!q || typeof q !== 'string' || q.trim() === '') {
             return res.status(400).json({ error: 'Search query is required' });
         }
@@ -138,7 +138,7 @@ export const updateUserProfile = async (req: AuthenticatedRequest, res: Response
 
         // Build update object with only provided fields
         const profileUpdate: Partial<{ username: string; statusText: string; profilePictureUrl: string }> = {};
-        
+
         if (updateData.username !== undefined) profileUpdate.username = updateData.username;
         if (updateData.statusText !== undefined) profileUpdate.statusText = updateData.statusText;
 
@@ -205,24 +205,68 @@ export const updateUserProfile = async (req: AuthenticatedRequest, res: Response
             return res.status(404).json({ error: 'User not found' });
         }
 
-        return res.status(200).json({ 
+        return res.status(200).json({
             message: 'Profile updated successfully',
-            user: updatedUser 
+            user: updatedUser
         });
     } catch (error) {
         console.error('Error updating user profile:', error);
         if (error instanceof ZodError) {
-                return res.status(400).json({
-                    error: 'Validation failed',
-                    details: error.issues.map(issue => ({
-                        field: issue.path.join('.'),
-                        message: issue.message
-                    }))
-                });
-            }
+            return res.status(400).json({
+                error: 'Validation failed',
+                details: error.issues.map(issue => ({
+                    field: issue.path.join('.'),
+                    message: issue.message
+                }))
+            });
+        }
         if ((error as { code?: number }).code === 11000) {
             return res.status(409).json({ error: 'Username or email already exists' });
         }
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+
+
+export const sendFriendRequest = async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
+    try {
+        const currentUserId = req.user?.userId;
+        const { targetUserId } = req.body;
+
+        if (!currentUserId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        if (!targetUserId) {
+            return res.status(400).json({ error: 'Target user ID is required' });
+        }
+
+        if (currentUserId === targetUserId) {
+            return res.status(400).json({ error: 'You cannot send a friend request to yourself' });
+        }
+
+        const targetUser = await User.findByIdAndUpdate(
+            targetUserId,
+            {
+                $push: {
+                    friendRequests: {
+                        from: currentUserId,
+                        status: 'pending',
+                    }
+                }
+            },
+            { new: true }
+        );
+
+        if (!targetUser) {
+            return res.status(404).json({ error: 'Target user not found' });
+        }
+
+        return res.status(200).json({ user: targetUser, message: 'Friend request sent successfully' });
+
+    } catch (error) {
+        console.error('Error sending friend request:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
