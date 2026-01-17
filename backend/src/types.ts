@@ -12,6 +12,12 @@ export interface IUser {
   tokenVersion?: number;
   createdAt?: Date;
   updatedAt?: Date;
+  friends?: string[];
+  friendsRequests?: Array<{
+    from : string;
+    staus : 'pending' | 'accepted' | 'rejected';
+    createdAt : Date;
+  }>;
 }
 
 export interface JwtPayloadType {
