@@ -270,3 +270,35 @@ export const sendFriendRequest = async (req: AuthenticatedRequest, res: Response
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
+
+
+export const acceptFriendRequest = async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
+    try {
+        const currentUserId = req.user?.userId;
+        const { requestId } = req.body;
+        if (!currentUserId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        if (!requestId) {
+            return res.status(400).json({ error: 'Friend request ID is required' });
+        }
+
+        await User.findByIdAndUpdate(currentUserId, {
+            $pull: { friendRequests: { from: requestId } },
+            $push: { friends: requestId }
+        });
+
+        await User.findByIdAndUpdate(requestId, {
+            $push: { friends: currentUserId }
+        });
+
+        return res.status(200).json({ message: 'Friend request accepted successfully' });
+
+
+    } catch (error) {
+        console.error('Error accepting friend request:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+
+};
