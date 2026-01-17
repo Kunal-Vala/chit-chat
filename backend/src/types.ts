@@ -13,10 +13,10 @@ export interface IUser {
   createdAt?: Date;
   updatedAt?: Date;
   friends?: string[];
-  friendsRequests?: Array<{
-    from : string;
-    staus : 'pending' | 'accepted' | 'rejected';
-    createdAt : Date;
+  friendRequests?: Array<{
+    from: string;
+    status: 'pending' | 'accepted' | 'rejected';
+    createdAt?: Date;
   }>;
 }
 

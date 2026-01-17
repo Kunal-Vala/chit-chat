@@ -40,25 +40,25 @@ const userSchema = new Schema<IUser>({
         ref: 'User',
         default: [],
     },
-        friendsRequests: {
-            type: [{
-                from: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: 'User',
-                    required: true,
-                },
-                status: {
-                    type: String,
-                    enum: ['pending', 'accepted', 'rejected'],
-                    default: 'pending',
-                },
-                createdAt: {
-                    type: Date,
-                    default: Date.now,
-                },
-            }],
-            default: [],
-        },
+    friendRequests: {
+        type: [{
+            from: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
+                required: true,
+            },
+            status: {
+                type: String,
+                enum: ['pending', 'accepted', 'rejected'],
+                default: 'pending',
+            },
+            createdAt: {
+                type: Date,
+                default: Date.now,
+            },
+        }],
+        default: [],
+    },
     }, { timestamps: true });
 
 const User: Model<IUser> = mongoose.model<IUser>('User', userSchema);
