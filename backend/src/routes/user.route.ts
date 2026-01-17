@@ -6,7 +6,8 @@ import { getUserById,
     uploadProfilePicture,
     sendFriendRequest,
     acceptFriendRequest,
-    rejectFriendRequest
+    rejectFriendRequest,
+    deleteFriend,
 } from "../controllers/user.controller";
 import { authenticateUser } from "../middleware/auth.middleware";
 import multer from "multer";
@@ -63,3 +64,4 @@ router.post('/profile/:userid/upload-picture', authenticateUser, upload.single('
 router.post('/friend/request', authenticateUser, sendFriendRequest);
 router.post('/friend/accept', authenticateUser, acceptFriendRequest);
 router.post('/friend/reject', authenticateUser, rejectFriendRequest);
+router.post('/friend/delete', authenticateUser, deleteFriend);

@@ -246,6 +246,25 @@ export const sendFriendRequest = async (req: AuthenticatedRequest, res: Response
             return res.status(400).json({ error: 'You cannot send a friend request to yourself' });
         }
 
+        const alreadyFriends = await User.findOne({
+            _id: currentUserId,
+            friends: targetUserId
+        });
+
+        if (alreadyFriends) {
+            return res.status(400).json({ error: 'You are already friends with this user' });
+        }
+
+        const existingRequest = await User.findOne({
+            _id: targetUserId,
+            'friendRequests.from': currentUserId,
+            'friendRequests.status': 'pending'
+        });
+
+        if (existingRequest) {
+            return res.status(400).json({ error: 'Friend request already sent and pending' });
+        }
+
         const targetUser = await User.findByIdAndUpdate(
             targetUserId,
             {
@@ -323,6 +342,35 @@ export const rejectFriendRequest = async (req: AuthenticatedRequest, res: Respon
         return res.status(200).json({ message: 'Friend request rejected successfully' });
     } catch (error) {
         console.error('Error rejecting friend request:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export const deleteFriend = async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
+    try {
+        const currentUserId = req.user?.userId;
+        const { friendId } = req.body;
+
+        if (!currentUserId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        if (!friendId) {
+            return res.status(400).json({ error: 'Friend ID is required' });
+        }
+
+        await User.findByIdAndUpdate(currentUserId, {
+            $pull: { friends: friendId }
+        });
+
+        await User.findByIdAndUpdate(friendId, {
+            $pull: { friends: currentUserId }
+        });
+
+        return res.status(200).json({ message: 'Friend deleted successfully' });
+
+    } catch (error) {
+        console.error('Error deleting friend:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
