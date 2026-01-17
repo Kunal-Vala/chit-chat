@@ -302,3 +302,27 @@ export const acceptFriendRequest = async (req: AuthenticatedRequest, res: Respon
     }
 
 };
+
+export const rejectFriendRequest = async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
+    try {
+        const currentUserId = req.user?.userId;
+        const { requestId } = req.body;
+
+        if (!currentUserId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        if (!requestId) {
+            return res.status(400).json({ error: 'Friend request ID is required' });
+        }
+
+        await User.findByIdAndUpdate(currentUserId, {
+            $pull: { friendRequests: { from: requestId } }
+        });
+
+        return res.status(200).json({ message: 'Friend request rejected successfully' });
+    } catch (error) {
+        console.error('Error rejecting friend request:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
