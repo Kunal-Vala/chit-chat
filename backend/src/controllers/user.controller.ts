@@ -475,3 +475,79 @@ export const deleteFriend = async (req: AuthenticatedRequest, res: Response): Pr
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
+
+export const getFriendsList = async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
+    try {
+        const currentUserId = req.user?.userId;
+
+        if (!currentUserId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const currentUser = await User.findById(currentUserId);
+
+        if (!currentUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (!currentUser.friends || currentUser.friends.length === 0) {
+            return res.status(200).json({
+                friends: [],
+                total: 0,
+                onlineCount: 0
+            });
+        }
+
+        // Get friends sorted by online status
+        const friends = await User.find({
+            _id: { $in: currentUser.friends }
+        })
+            .select('-password -tokenVersion -email')
+            .sort({ onlineStatus: -1, username: 1 }) // Online first, then alphabetically
+            .lean();
+
+        const onlineCount = friends.filter(friend => friend.onlineStatus).length;
+
+        return res.status(200).json({
+            friends,
+            total: friends.length,
+            onlineCount
+        });
+    } catch (error) {
+        console.error('Error fetching friends list:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export const getFriendRequests = async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
+    try {
+        const currentUserId = req.user?.userId;
+
+        if (!currentUserId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const currentUser = await User.findById(currentUserId)
+            .populate({
+                path: 'friendRequests.from',
+                select: '-password -tokenVersion -email'
+            });
+
+        if (!currentUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Filter only pending requests and sort by newest first
+        const pendingRequests = currentUser.friendRequests
+            ?.filter(req => req.status === 'pending')
+            .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0)) || [];
+
+        return res.status(200).json({
+            friendRequests: pendingRequests,
+            total: pendingRequests.length
+        });
+    } catch (error) {
+        console.error('Error fetching friend requests:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};

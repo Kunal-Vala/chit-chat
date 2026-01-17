@@ -8,6 +8,8 @@ import { getUserById,
     acceptFriendRequest,
     rejectFriendRequest,
     deleteFriend,
+    getFriendsList,
+    getFriendRequests,
 } from "../controllers/user.controller";
 import { authenticateUser } from "../middleware/auth.middleware";
 import multer from "multer";
@@ -65,3 +67,5 @@ router.post('/friend/request', authenticateUser, sendFriendRequest);
 router.post('/friend/accept', authenticateUser, acceptFriendRequest);
 router.post('/friend/reject', authenticateUser, rejectFriendRequest);
 router.post('/friend/delete', authenticateUser, deleteFriend);
+router.get('/friend', authenticateUser, getFriendsList);
+router.get('/friend/request', authenticateUser, getFriendRequests);
