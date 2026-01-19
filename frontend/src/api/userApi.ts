@@ -1,5 +1,7 @@
 import axios, { AxiosError } from "axios";
 import { getStoredToken } from "./axiosConfig";
+import UserProfile from "../pages/UserProfile";
+import { fi } from "zod/locales";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api'
 
@@ -40,4 +42,42 @@ const getHeaders = () => ({
     Authorization: `Bearer ${getStoredToken()}`,
   },
 })
+
+
+// GET PROFILE BY ID
+
+export const getUserProfile = async (userId: string): Promise<UserProfile> => {
+  try {
+    const response = await axios.get<{ user: UserProfile }>(`${API_BASE_URL}/user/profile/${userId}`, getHeaders())
+    return response.data.user
+  } catch (error) {
+    throw new Error(extractErrorMessage(error))
+  }
+}
+
+// UPDATE USER PROFILE
+
+export const updateUserProfile = async (userId: string, data: Partial<{ username: string, statusText: string, profilePictureUrl: string }>) => {
+  try {
+    const response = await axios.put(`${API_BASE_URL}/user/profile/${userId}`, data, getHeaders())
+    return response.data
+  } catch (error) {
+    throw new Error(extractErrorMessage(error))
+  }
+}
+
+// UPDATE PROFILE PICTURE WITH FILE
+
+export const uploadProfilePicture = async (userId: string, file: File) => {
+  try {
+    const formData = new FormData()
+    formData.append("profilePicture", file)
+
+    const response = await axios.post(`${API_BASE_URL}/user/profile/${userId}/upload-picture`, formData, getHeaders())
+
+    return response.data
+  } catch (error) {
+    throw new Error(extractErrorMessage(error))
+  }
+}
 
