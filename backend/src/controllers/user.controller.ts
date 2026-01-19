@@ -91,6 +91,56 @@ export const uploadProfilePicture = async (req: AuthenticatedRequest, res: Respo
     }
 };
 
+export const deleteProfilePicture = async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
+    try {
+        const userId = req.params.userid;
+
+        // Verify the user is deleting their own picture
+        if (req.user?.userId !== userId) {
+            return res.status(403).json({ error: 'Unauthorized: You can only delete your own profile picture' });
+        }
+
+        // Get current user to find Cloudinary image for deletion
+        const currentUser = await User.findById(userId);
+
+        if (!currentUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const oldCloudinaryUrl = currentUser.profilePictureUrl;
+
+        // Update user to remove profile picture URL
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $unset: { profilePictureUrl: '' } },
+            { new: true, runValidators: true }
+        ).select('-password -tokenVersion');
+
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Delete old image from Cloudinary if it exists
+        if (oldCloudinaryUrl && oldCloudinaryUrl.includes('cloudinary.com')) {
+            const publicId = extractPublicIdFromUrl(oldCloudinaryUrl);
+            if (publicId) {
+                await deleteFromCloudinary(publicId);
+            }
+        }
+
+        return res.status(200).json({
+            message: 'Profile picture deleted successfully',
+            user: updatedUser
+        });
+    } catch (error) {
+        console.error('Error deleting profile picture:', error);
+        return res.status(400).json({
+            error: 'Failed to delete profile picture',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
 export const searchUsersByUsername = async (req: Request, res: Response): Promise<Response | void> => {
     try {
         const { q } = req.query;
@@ -266,7 +316,7 @@ export const sendFriendRequest = async (req: AuthenticatedRequest, res: Response
             return res.status(400).json({ error: 'You are already friends with this user' });
         }
 
-        // Check if request already pending
+        // Check if request already sent by current user to target user
         const existingRequest = await User.findOne({
             _id: targetUserId,
             'friendRequests.from': currentUserId,
@@ -277,6 +327,31 @@ export const sendFriendRequest = async (req: AuthenticatedRequest, res: Response
             return res.status(400).json({ error: 'Friend request already sent and pending' });
         }
 
+        // Check if target user has already sent a request to current user (mutual interest)
+        const currentUser = await User.findById(currentUserId);
+        const incomingRequest = currentUser?.friendRequests?.find(
+            req => req.from.toString() === targetUserId && req.status === 'pending'
+        );
+
+        // If there's a pending request from target user, accept it automatically (mutual interest)
+        if (incomingRequest) {
+            // Add each other as friends
+            await User.findByIdAndUpdate(currentUserId, {
+                $push: { friends: targetUserId },
+                $pull: { friendRequests: { from: targetUserId, status: 'pending' } }
+            });
+
+            await User.findByIdAndUpdate(targetUserId, {
+                $push: { friends: currentUserId }
+            });
+
+            return res.status(200).json({
+                message: 'Mutual friend request detected. You are now friends!',
+                status: 'friends'
+            });
+        }
+
+        // No existing relationship, send new friend request
         const targetUser = await User.findByIdAndUpdate(
             targetUserId,
             {
@@ -548,6 +623,60 @@ export const getFriendRequests = async (req: AuthenticatedRequest, res: Response
         });
     } catch (error) {
         console.error('Error fetching friend requests:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export const checkFriendshipStatus = async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
+    try {
+        const currentUserId = req.user?.userId;
+        const { targetUserId } = req.params;
+
+        if (!currentUserId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        if (!targetUserId || !targetUserId.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Invalid target user ID' });
+        }
+
+        if (currentUserId === targetUserId) {
+            return res.status(200).json({ status: 'self' });
+        }
+
+        const currentUser = await User.findById(currentUserId);
+        const targetUser = await User.findById(targetUserId);
+
+        if (!currentUser || !targetUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Check if they are friends
+        const areFriends = currentUser.friends?.some(friendId => friendId.toString() === targetUserId);
+        if (areFriends) {
+            return res.status(200).json({ status: 'friends' });
+        }
+
+        // Check if current user sent a request to target user (pending in target's requests)
+        const sentRequest = targetUser.friendRequests?.find(
+            req => req.from.toString() === currentUserId && req.status === 'pending'
+        );
+        if (sentRequest) {
+            return res.status(200).json({ status: 'request_sent' });
+        }
+
+        // Check if target user sent a request to current user (pending in current's requests)
+        const receivedRequest = currentUser.friendRequests?.find(
+            req => req.from.toString() === targetUserId && req.status === 'pending'
+        );
+        if (receivedRequest) {
+            return res.status(200).json({ status: 'request_received' });
+        }
+
+        // No relationship
+        return res.status(200).json({ status: 'none' });
+    } catch (error) {
+        console.error('Error checking friendship status:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }
 };

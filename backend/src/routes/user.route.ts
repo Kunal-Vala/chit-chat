@@ -4,12 +4,14 @@ import { getUserById,
     updateUserProfile, 
     searchUsersByUsername, 
     uploadProfilePicture,
+    deleteProfilePicture,
     sendFriendRequest,
     acceptFriendRequest,
     rejectFriendRequest,
     deleteFriend,
     getFriendsList,
     getFriendRequests,
+    checkFriendshipStatus,
 } from "../controllers/user.controller";
 import { authenticateUser } from "../middleware/auth.middleware";
 import multer from "multer";
@@ -63,9 +65,11 @@ router.get('/search', authenticateUser, searchUsersByUsername);
 router.get('/profile/:userid', authenticateUser, getUserById);
 router.put('/profile/:userid', authenticateUser, updateUserProfile);
 router.post('/profile/:userid/upload-picture', authenticateUser, upload.single('profilePicture'), uploadProfilePicture);
+router.delete('/profile/:userid/picture', authenticateUser, deleteProfilePicture);
 router.post('/friend/request', authenticateUser, sendFriendRequest);
 router.post('/friend/accept', authenticateUser, acceptFriendRequest);
 router.post('/friend/reject', authenticateUser, rejectFriendRequest);
 router.post('/friend/delete', authenticateUser, deleteFriend);
 router.get('/friend', authenticateUser, getFriendsList);
 router.get('/friend/request', authenticateUser, getFriendRequests);
+router.get('/friend/status/:targetUserId', authenticateUser, checkFriendshipStatus);
