@@ -33,7 +33,7 @@ export const setAuthHandlers = (h: AuthHandlers): void => {
  * Reads the persisted token first (Remember Me) and falls back to the in-memory
  * token for non-remembered sessions. Returns null on server-side rendering.
  */
-const getStoredToken = (): string | null => {
+export const getStoredToken = (): string | null => {
 	if (typeof window === 'undefined') {
 		return null
 	}
