@@ -4,13 +4,15 @@ import type { FriendRequest, UserProfile } from "../types";
 import { deleteFriend, getFriendRequests, getFriendsList } from "../api/userApi";
 import { set } from "zod";
 
-function FriendManager() {
+function FriendsManager() {
     const navigate = useNavigate()
     const [friends, setFriends] = useState<UserProfile[]>([])
     const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([])
     const [loading, setLoading] = useState<boolean>(true)
     const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<"friends" | "requests">("friends")
+    const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false)
+    const [friendToDelete, setFriendToDelete] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchData = async () => {
@@ -32,13 +34,26 @@ function FriendManager() {
     }, [])
 
     const handleDeleteFriend = async (friendId: string) => {
-        try {
-            await deleteFriend(friendId)
-            setFriends(prev => prev.filter(f => f._id !== friendId))
+        setFriendToDelete(friendId)
+        setShowDeleteModal(true)
+    }
 
+    const confirmDelete = async () => {
+        if (!friendToDelete) return
+        
+        try {
+            await deleteFriend(friendToDelete)
+            setFriends(prev => prev.filter(f => f._id !== friendToDelete))
+            setShowDeleteModal(false)
+            setFriendToDelete(null)
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to delete friend")
         }
+    }
+
+    const cancelDelete = () => {
+        setShowDeleteModal(false)
+        setFriendToDelete(null)
     }
 
 
@@ -113,8 +128,36 @@ function FriendManager() {
                     )}
                 </div>
             )}
+
+
+            {/* Friend Requests Tab Content */}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50">
+                    <div className=" border-2 border-gray-500 bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
+                        <h3 className="text-xl font-bold mb-4">Remove Friend?</h3>
+                        <p className="text-gray-600 mb-6">Are you sure you want to remove this friend? This action cannot be undone.</p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={cancelDelete}
+                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
+                            >
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
         </div>
     )
 }
 
-export default FriendManager
+export default FriendsManager
