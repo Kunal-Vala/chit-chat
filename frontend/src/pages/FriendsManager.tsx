@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { FriendRequest, UserProfile } from "../types";
-import { getFriendRequests, getFriendsList } from "../api/userApi";
+import { deleteFriend, getFriendRequests, getFriendsList } from "../api/userApi";
+import { set } from "zod";
 
 function FriendManager() {
     const navigate = useNavigate()
@@ -29,6 +30,25 @@ function FriendManager() {
         }
         fetchData()
     }, [])
+
+    const handleDeleteFriend = async (friendId: string) => {
+        try {
+            await deleteFriend(friendId)
+            setFriends(prev => prev.filter(f => f._id !== friendId))
+
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to delete friend")
+        }
+    }
+
+
+
+
+
+
+
+
+
 
     if (loading) return <div className="text-center py-8">Loading...</div>
 
