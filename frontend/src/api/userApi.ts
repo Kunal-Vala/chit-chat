@@ -1,7 +1,5 @@
 import axios, { AxiosError } from "axios";
 import { getStoredToken } from "./axiosConfig";
-import UserProfile from "../pages/UserProfile";
-import { fi } from "zod/locales";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api'
 
@@ -75,6 +73,33 @@ export const uploadProfilePicture = async (userId: string, file: File) => {
 
     const response = await axios.post(`${API_BASE_URL}/user/profile/${userId}/upload-picture`, formData, getHeaders())
 
+    return response.data
+  } catch (error) {
+    throw new Error(extractErrorMessage(error))
+  }
+}
+
+
+// DELETE PROFILE PICTURE
+
+export const deleteProfilePicture = async (userId: string) => {
+  try {
+    const response = await axios.delete(`${API_BASE_URL}/user/profile/${userId}/picture`, getHeaders())
+    return response.data
+  } catch (error) {
+    throw new Error(extractErrorMessage(error))
+  }
+}
+
+
+
+// SEARCH USER BY USERNAME
+export const searchUsers = async (query: string, limit = 10, skip = 0) => {
+  try {
+    const response = await axios.get<{ users: UserProfile[]; total: number; limit: number; skip: number }>(`${API_BASE_URL}/user/search`, {
+      params: { q: query, limit, skip },
+      ...getHeaders(),
+    })
     return response.data
   } catch (error) {
     throw new Error(extractErrorMessage(error))
