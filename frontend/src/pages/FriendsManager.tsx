@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { FriendRequest, UserProfile } from "../types";
-import { deleteFriend, getFriendRequests, getFriendsList } from "../api/userApi";
-import { set } from "zod";
+import { acceptFriendRequest, deleteFriend, getFriendRequests, getFriendsList, rejectFriendRequest } from "../api/userApi";
 
 function FriendsManager() {
     const navigate = useNavigate()
@@ -40,7 +39,7 @@ function FriendsManager() {
 
     const confirmDelete = async () => {
         if (!friendToDelete) return
-        
+
         try {
             await deleteFriend(friendToDelete)
             setFriends(prev => prev.filter(f => f._id !== friendToDelete))
@@ -56,9 +55,30 @@ function FriendsManager() {
         setFriendToDelete(null)
     }
 
+    const handleAcceptRequest = async (fromUserId: string) => {
+        try {
+            await acceptFriendRequest(fromUserId)
+            setFriendRequests(prev => prev.filter(req => {
+                const fromId = typeof req.from === 'string' ? req.from : req.from._id
+                return fromId !== fromUserId
+            }))
 
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to accept friend request")
+        }
+    }
 
-
+    const handleRejectRequest = async (senderId: string) => {
+        try {
+            await rejectFriendRequest(senderId)
+            setFriendRequests(prev => prev.filter(req => {
+                const fromId = typeof req.from === 'string' ? req.from : req.from._id
+                return fromId !== senderId
+            }))
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to reject request')
+        }
+    }
 
 
 
@@ -132,6 +152,52 @@ function FriendsManager() {
 
             {/* Friend Requests Tab Content */}
 
+            {activeTab === 'requests' && (
+                <div className="grid gap-4">
+                    {friendRequests.length > 0 ? (
+                        friendRequests.map(request => {
+                            const fromUser = typeof request.from === 'string' ? null : request.from
+                            const fromId = typeof request.from === 'string' ? request.from : request.from._id
+
+                            return (
+                                <div key={fromId} className="bg-white rounded-lg shadow-md p-6 flex items-center justify-between">
+                                    <div className="flex items-center gap-4 flex-1">
+                                        {fromUser?.profilePictureUrl ? (
+                                            <img src={fromUser.profilePictureUrl} alt={fromUser.username} className="w-18 h-18 border-2 border-black-400 rounded-full object-cover" />
+                                        ) : (
+                                            <div className="w-18 h-18 border-2 border-black-400 rounded-full bg-gray-300 flex items-center justify-center">
+                                                <span className="text-2xl text-gray-600">{fromUser?.username?.[0]?.toUpperCase() || '?'}</span>
+                                            </div>
+                                        )}
+                                        <div>
+                                            <h3 className="text-lg font-semibold">{fromUser?.username || 'Unknown User'}</h3>
+                                            {fromUser?.statusText && <p className="text-gray-600 text-sm">{fromUser.statusText}</p>}
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleAcceptRequest(fromId)}
+                                            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                                        >
+                                            Accept
+                                        </button>
+                                        <button
+                                            onClick={() => handleRejectRequest(fromId)}
+                                            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                                        >
+                                            Reject
+                                        </button>
+                                    </div>
+                                </div>
+                            )
+                        })
+                    ) : (
+                        <div className="text-center py-8 text-gray-500">No pending requests</div>
+                    )}
+                </div>
+            )}
+
+
             {/* Delete Confirmation Modal */}
             {showDeleteModal && (
                 <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50">
@@ -155,7 +221,7 @@ function FriendsManager() {
                     </div>
                 </div>
             )}
-            
+
         </div>
     )
 }
