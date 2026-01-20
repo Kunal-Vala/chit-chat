@@ -147,3 +147,36 @@ export const deleteFriend = async (friendId: string) => {
     throw new Error(extractErrorMessage(error))
   }
 }
+
+// Get friends list
+export const getFriendsList = async () => {
+  try {
+    const response = await axios.get<{ friends: UserProfile[] }>(`${API_BASE_URL}/user/friend`, getHeaders())
+    return response.data.friends
+  } catch (error) {
+    throw new Error(extractErrorMessage(error))
+  }
+}
+
+// Get friend requests
+export const getFriendRequests = async () => {
+  try {
+    const response = await axios.get<{ friendRequests: FriendRequest[] }>(`${API_BASE_URL}/user/friend/request`, getHeaders())
+    return response.data.friendRequests
+  } catch (error) {
+    throw new Error(extractErrorMessage(error))
+  }
+}
+
+// Check friendship status with a specific user
+export const checkFriendshipStatus = async (targetUserId: string) => {
+  try {
+    const response = await axios.get<{ status: 'self' | 'friends' | 'request_sent' | 'request_received' | 'none' }>(
+      `${API_BASE_URL}/user/friend/status/${targetUserId}`,
+      getHeaders()
+    )
+    return response.data.status
+  } catch (error) {
+    throw new Error(extractErrorMessage(error))
+  }
+}
