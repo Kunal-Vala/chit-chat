@@ -106,3 +106,44 @@ export const searchUsers = async (query: string, limit = 10, skip = 0) => {
   }
 }
 
+// SEND FRIEND REQUEST
+
+export const sendFriendRequest = async (targetUserId: string) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/user/friend/request`,{targetUserId},getHeaders())
+    return response.data
+  } catch (error) {
+    throw new Error(extractErrorMessage(error))
+  }
+}
+
+// Accept friend request
+export const acceptFriendRequest = async (requesterId: string) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/user/friend/accept`, { requesterId }, getHeaders())
+    return response.data
+  } catch (error) {
+    throw new Error(extractErrorMessage(error))
+  }
+}
+
+// Reject friend request
+export const rejectFriendRequest = async (requesterId: string) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/user/friend/reject`, { requesterId }, getHeaders())
+    return response.data
+  } catch (error) {
+    throw new Error(extractErrorMessage(error))
+  }
+}
+
+
+// Delete friend
+export const deleteFriend = async (friendId: string) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/user/friend/delete`, { friendId }, getHeaders())
+    return response.data
+  } catch (error) {
+    throw new Error(extractErrorMessage(error))
+  }
+}
