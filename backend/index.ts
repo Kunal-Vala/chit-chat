@@ -5,36 +5,52 @@ import { router as ChatRouter } from './src/routes/chat.route';
 import { router as UserRouter } from './src/routes/user.route';
 import cors from "cors";
 import { FRONTEND } from './src/config/env';
+import { createServer } from 'http';
+import { Server } from "socket.io";
 
-connectDB().catch(error => {
-  console.log(error);
-});
 
 const app = express();
+const httpServer = createServer(app);
 
 const allowedOrigins = (FRONTEND || 'http://localhost:3001,http://localhost:5173,http://localhost:4173')
   .split(',')
   .map((s) => s.trim());
 
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-}));
 
+const io = new Server(httpServer, {
+  cors: {
+    origin: allowedOrigins,
+    credentials: true,
+  }
+});
+
+// Middleware
+app.use(cors());
 app.use(express.json());
+
+// Routes
 app.use('/api/chat', ChatRouter);
 app.use('/api/auth', AuthRouter);
 app.use('/api/user', UserRouter);
 
-const PORT = 3000;
+// Socket.io Connection Handling
 
-app.get('/ping', (_req, res) => {
-  console.log('someone pinged here');
-  res.send('pong');
+io.on('connection', (socket) => {
+  console.log("User Connected :", socket.id);
+
+  socket.on('disconnect', () => {
+    console.log("User Disconnected", socket.id);
+  });
 });
 
+// Start server
+const PORT = process.env.PORT || 3000;
 
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+connectDB().then(() => {
+  httpServer.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}).catch((error) => {
+  console.error('Failed to connect to database:', error);
+  process.exit(1);
 });
