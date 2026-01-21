@@ -1,4 +1,5 @@
 import { Request } from 'express';
+import { Types } from 'mongoose';
 
 export interface IUser {
   _id: string;
@@ -39,27 +40,26 @@ export interface SignInBody {
 
 export interface IConversation {
   _id: string;
-  participants: string[];
-  type: 'direct' | 'group'
+  participants: string[]; // For direct chats: [user1, user2]. For groups: all member IDs
+  conversationType: 'direct' | 'group'
   groupName?: string
   groupAvatarUrl?: string;
   groupDescription?: string
-  members?: Array<{
+  groupMembers?: Array<{ // Only used for group chats
     userId: string;
     role: 'admin' | 'member';
     joinedAt?: Date;
   }>;
   unreadCount?: { [userId: string]: number };
-  adminId?: string
-  lastMessage?: string
+  lastMessageId?: string; // Reference to the last message
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 export interface IMessage {
   _id: string;
-  conversationId: string;
-  senderId: string;
+  conversationId: Types.ObjectId;
+  senderId: Types.ObjectId;
   content: string;
   messageType: 'text' | 'image' | 'file';
   mediaUrl?: string;
@@ -67,15 +67,15 @@ export interface IMessage {
   sentAt: Date;
   deliveredAt?: Date;
   readAt?: Date;
-  readBy?: string[];
+  readBy?: Types.ObjectId[];
   isEdited?: boolean;
   editedAt?: Date;
   isDeleted?: boolean;
   deletedAt?: Date;
-  replyToMessageId?: string;
+  replyToMessageId?: Types.ObjectId;
   reactions?: Array<{
     emoji: string;
-    userId: string;
+    userId: Types.ObjectId;
   }>;
   createdAt?: Date;
   updatedAt?: Date;
