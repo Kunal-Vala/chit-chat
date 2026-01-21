@@ -47,6 +47,7 @@ export default function Register() {
                     : err.response?.data?.message || err.response?.data?.error || 'Registration failed'
                 setError(apiMessage || 'Registration failed')
             } else {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const msg = err && typeof err === 'object' && 'message' in (err as any) ? (err as any).message : 'Registration failed'
                 setError(msg)
             }

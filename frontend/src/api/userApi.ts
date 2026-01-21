@@ -1,17 +1,19 @@
 import axios, { AxiosError } from "axios";
 import { getStoredToken } from "./axiosConfig";
+import type { UserProfile, FriendRequest } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api'
 
 /**HELPER TO EXTRACT ERROR MESSAGE FROM API RESPONSE */
 
-const extractErrorMessage = (error: unknown): string => {
+const extractErrorMessage = (error: unknown): string | undefined => {
   if (error instanceof AxiosError) {
     const data = error.response?.data
     if (data?.error) return data.error
     if (data?.message) return data.message
     if (data?.details) {
       if (Array.isArray(data.details)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return data.details.map((d: any) => d.message || d).join(', ')
       }
       return String(data.details)
@@ -19,21 +21,6 @@ const extractErrorMessage = (error: unknown): string => {
   }
 }
 
-interface UserProfile {
-  _id: string
-  username: string
-  email: string
-  profilePictureUrl?: string
-  statusText?: string
-  onlineStatus?: boolean
-  lastSeen?: Date
-}
-
-interface FriendRequest {
-  from: UserProfile | string
-  status: 'pending' | 'accepted' | 'rejected'
-  createdAt?: Date
-}
 
 const getHeaders = () => ({
   headers: {
@@ -110,7 +97,7 @@ export const searchUsers = async (query: string, limit = 10, skip = 0) => {
 
 export const sendFriendRequest = async (targetUserId: string) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/user/friend/request`,{targetUserId},getHeaders())
+    const response = await axios.post(`${API_BASE_URL}/user/friend/request`, { targetUserId }, getHeaders())
     return response.data
   } catch (error) {
     throw new Error(extractErrorMessage(error))
