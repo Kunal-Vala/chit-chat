@@ -1,6 +1,9 @@
 import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
 import Register from "./pages/Register";
 import Sign_In from "./pages/Sign_In";
+import Profile from "./pages/Profile";
+import SearchUsers from "./pages/SearchUsers";
+import FriendsManager from "./pages/FriendsManager";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
@@ -13,7 +16,9 @@ function AppShell() {
                 <ul className="max-w-7xl mx-auto px-4 py-4 flex gap-6 items-center">
                     {isAuthenticated ? (
                         <>
-                            <li><Link to="/create" className="text-blue-600 hover:text-blue-800">Create Post</Link></li>
+                            <li><Link to="/search" className="text-blue-600 hover:text-blue-800">Search Users</Link></li>
+                            <li><Link to="/friends" className="text-blue-600 hover:text-blue-800">Friends</Link></li>
+                            <li><Link to={`/user/${user?.userId}`} className="text-blue-600 hover:text-blue-800">Profile</Link></li>
                             <li className="ml-auto text-gray-700 font-medium">{user?.username}</li>
                             <li><button onClick={logout} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Logout</button></li>
                         </>
@@ -28,11 +33,14 @@ function AppShell() {
 
             <main className="max-w-7xl mx-auto px-4 py-8">
                 <Routes>
-                    <Route path="/" element={<Navigate to={isAuthenticated ? "/create" : "/login"} replace />} />
-                    <Route path="/register" element={isAuthenticated ? <Navigate to="/create" replace /> : <Register />} />
-                    <Route path="/login" element={isAuthenticated ? <Navigate to="/create" replace /> : <Sign_In/>} />
+                    <Route path="/" element={<Navigate to={isAuthenticated ? "/search" : "/login"} replace />} />
+                    <Route path="/register" element={isAuthenticated ? <Navigate to="/search" replace /> : <Register />} />
+                    <Route path="/login" element={isAuthenticated ? <Navigate to="/search" replace /> : <Sign_In/>} />
                     <Route element={<ProtectedRoute />}> 
-                        <Route path="/create" element={<div>Create Post Page - Coming Soon</div>} />
+                        <Route path="/search" element={<SearchUsers />} />
+                        <Route path="/friends" element={<FriendsManager />} />
+                        <Route path="/user/:userId" element={<Profile />} />
+                        <Route path="/users/:userId" element={<Profile />} />
                     </Route>
                 </Routes>
             </main>
