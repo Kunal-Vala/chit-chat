@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { getUserProfile, uploadProfilePicture, deleteProfilePicture, updateUserProfile, sendFriendRequest, deleteFriend, checkFriendshipStatus } from '../api/userApi'
 import type { UserProfile } from '../types'
 
-function UserProfile() {
+function Profile() {
   const { userId } = useParams<{ userId: string }>()
   const { user: currentUser } = useAuth()
   const navigate = useNavigate()
@@ -232,4 +232,4 @@ function UserProfile() {
   )
 }
 
-export default UserProfile
+export default Profile
