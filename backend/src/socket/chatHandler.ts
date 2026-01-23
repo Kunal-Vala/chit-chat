@@ -129,6 +129,61 @@ export const setupChatHandlers = (io: Server) => {
             }
         });
 
+        // Message Delivered Acknowledgment
+
+        socket.on('message-delivered', async (messageId: string) => {
+            try {
+                const message = await Message.findByIdAndUpdate(
+                    messageId,
+                    {
+                        deliveryStatus: 'delivered',
+                        sentAt: new Date(),
+                    },
+                    { new: true }
+                );
+
+                if (message) {
+                    // Notify sender
+                    const senderSocketId = onlineUsers.get(message.senderId.toString());
+                    if (senderSocketId) {
+                        io.to(senderSocketId).emit('message-status-updated', {
+                            messageId,
+                            status: 'delivered'
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating delivery status:', error);
+            }
+        });
+
+        // Message read acknowledgment
+        socket.on('message-read', async (messageId: string) => {
+            try {
+                const message = await Message.findByIdAndUpdate(
+                    messageId,
+                    {
+                        deliveryStatus: 'read',
+                        readAt: new Date(),
+                        $addToSet: { readBy: userId }
+                    },
+                    { new: true }
+                );
+
+                if (message) {
+                    // Notify sender
+                    const senderSocketId = onlineUsers.get(message.senderId.toString());
+                    if (senderSocketId) {
+                        io.to(senderSocketId).emit('message-status-updated', {
+                            messageId,
+                            status: 'read'
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating read status:', error);
+            }
+        });
 
     });
 };
