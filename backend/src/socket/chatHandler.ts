@@ -185,6 +185,33 @@ export const setupChatHandlers = (io: Server) => {
             }
         });
 
+        // Typing indicators
+        socket.on('typing-start', (conversationId: string) => {
+            socket.to(conversationId).emit('user-typing', {
+                userId,
+                username: socket.data.username
+            });
+        });
+
+        socket.on('typing-stop', (conversationId: string) => {
+            socket.to(conversationId).emit('user-stopped-typing', { userId });
+        });
+
+        // Handle disconnection
+        socket.on('disconnect', async () => {
+            onlineUsers.delete(userId);
+
+            // Update user offline status
+            await User.findByIdAndUpdate(userId, {
+                onlineStatus: false,
+                lastSeen: new Date()
+            }).catch(console.error);
+
+            // Broadcast offline status
+            socket.broadcast.emit('user-offline', { userId });
+
+            console.log(`User ${socket.data.username} disconnected`);
+        });
     });
 };
 
