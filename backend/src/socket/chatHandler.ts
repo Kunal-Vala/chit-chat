@@ -25,7 +25,7 @@ export const setupChatHandlers = (io: Server) => {
 
         const token = socket.handshake.auth.token;
 
-        if (token) {
+        if (!token) {
             return next(new Error("Authentication Failed"));
         }
 
@@ -85,7 +85,7 @@ export const setupChatHandlers = (io: Server) => {
                     content: data.content,
                     messageType: data.messageType,
                     mediaUrl: data.mediaUrl,
-                    deliveryStatus: 'send',
+                    deliveryStatus: 'sent',
                     sentAt: new Date(),
                 });
 
@@ -125,7 +125,8 @@ export const setupChatHandlers = (io: Server) => {
 
             } catch (error) {
                 console.error('Error sending message:', error);
-                socket.emit('message-error', { error: 'Failed to send message' });
+                const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
+                socket.emit('message-error', { error: errorMessage });
             }
         });
 
