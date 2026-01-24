@@ -43,7 +43,7 @@ export const sign_up = async (req: Request<object, object, SignUpBody>, res: Res
         },
             JWT_SECRET,
             {
-                expiresIn: '1d',
+                expiresIn: '7d',
                 algorithm: 'HS256'
             }
         );
@@ -163,7 +163,7 @@ export const refresh = async (req: AuthenticatedRequest, res: Response): Promise
             },
             JWT_SECRET,
             { 
-                expiresIn: '1d',
+                expiresIn: '7d',
                 algorithm: 'HS256'
             }
         );
