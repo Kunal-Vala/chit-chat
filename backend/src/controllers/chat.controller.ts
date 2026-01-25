@@ -102,3 +102,56 @@ export const getConversation = async (req: AuthenticatedRequest, res: Response) 
         res.status(500).json({ error: 'Failed to fetch conversation' });
     }
 };
+
+// GET /api/chat/conversations/:conversationId/messages - Get messages (paginated)
+
+export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+        const { conversationId } = req.params;
+        const { page = 1, limit = 50 } = req.query;
+
+        // verify user is part of conversation
+
+        const conversation = await Conversation.findOne({
+            _id: conversationId,
+            participants: userId,
+        });
+
+        if (!conversation) {
+            res.status(404).json({ error: 'Conversation not found' });
+        }
+
+        const pageNum = parseInt(page as string);
+        const limitNum = parseInt(limit as string);
+        const skip = (pageNum - 1) * limitNum;
+
+        const message = await Message.find({
+            conversationId,
+            isDeleted: { $ne: true } //exclude deleted messages
+
+        })
+            .populate('senderId', 'username profilePictureUrl')
+            .sort({ sentAt: -1 }) // Most recent first 
+            .skip(skip)
+            .limit(limitNum);
+
+        const totalMessages = await Message.countDocuments({
+            conversationId,
+            isDeleted: { $ne: true }
+        });
+
+        res.json({
+            message: message.reverse(),
+            pagination: {
+                page: pageNum,
+                limit: limitNum,
+                total: totalMessages,
+                totalPages: Math.ceil(totalMessages / limitNum)
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching messages:', error);
+        res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+};
