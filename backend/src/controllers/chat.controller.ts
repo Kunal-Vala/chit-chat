@@ -217,3 +217,30 @@ export const editMessage = async (req: AuthenticatedRequest, res: Response) => {
     res.status(500).json({ error: 'Failed to edit message' });
   }
 };
+
+// PUT /api/chat/conversations/:conversationId/read - Mark all messages as read
+export const markConversationAsRead = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { conversationId } = req.params;
+
+    // Update all unread messages
+    await Message.updateMany(
+      {
+        conversationId,
+        senderId: { $ne: userId }, // Not sent by current user
+        readBy: { $ne: userId } // Not already read
+      },
+      {
+        $addToSet: { readBy: userId },
+        deliveryStatus: 'read',
+        readAt: new Date()
+      }
+    );
+
+    res.json({ message: 'Conversation marked as read' });
+  } catch (error) {
+    console.error('Error marking as read:', error);
+    res.status(500).json({ error: 'Failed to mark as read' });
+  }
+};
