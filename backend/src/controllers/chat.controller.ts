@@ -182,3 +182,38 @@ export const deleteMessage = async (req: AuthenticatedRequest, res: Response) =>
     res.status(500).json({ error: 'Failed to delete message' });
   }
 };
+
+// PUT /api/chat/messages/:messageId - Edit message
+export const editMessage = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { messageId } = req.params;
+    const { content } = req.body;
+
+    if (!content?.trim()) {
+      return res.status(400).json({ error: 'Content required' });
+    }
+
+    const message = await Message.findOneAndUpdate(
+      {
+        _id: messageId,
+        senderId: userId // Only sender can edit
+      },
+      {
+        content,
+        isEdited: true,
+        editedAt: new Date()
+      },
+      { new: true }
+    );
+
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found or unauthorized' });
+    }
+
+    res.json({ message });
+  } catch (error) {
+    console.error('Error editing message:', error);
+    res.status(500).json({ error: 'Failed to edit message' });
+  }
+};
