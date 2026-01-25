@@ -155,3 +155,30 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
         res.status(500).json({ error: 'Failed to fetch messages' });
     }
 };
+
+// DELETE /api/chat/messages/:messageId - Delete message
+export const deleteMessage = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { messageId } = req.params;
+
+    const message = await Message.findOne({
+      _id: messageId,
+      senderId: userId // Only sender can delete
+    });
+
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found or unauthorized' });
+    }
+
+    // Soft delete
+    message.isDeleted = true;
+    message.deletedAt = new Date();
+    await message.save();
+
+    res.json({ message: 'Message deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting message:', error);
+    res.status(500).json({ error: 'Failed to delete message' });
+  }
+};
