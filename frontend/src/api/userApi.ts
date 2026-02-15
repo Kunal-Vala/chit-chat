@@ -2,7 +2,7 @@ import axios, { AxiosError } from "axios";
 import { getStoredToken } from "./axiosConfig";
 import type { UserProfile, FriendRequest } from "../types";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5000/api'
 
 /**HELPER TO EXTRACT ERROR MESSAGE FROM API RESPONSE */
 
