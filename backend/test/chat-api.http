@@ -1,0 +1,44 @@
+### Variables
+@baseUrl = http://localhost:5000/api/chat
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTZiYjZjYWNjN2YwZWZjN2QxY2NmM2IiLCJlbWFpbCI6InRlc3R1c2VyMkBleGFtcGxlLmNvbSIsInVzZXJuYW1lIjoidGVzdHVzZXIyIiwidG9rZW5WZXJzaW9uIjoxLCJpYXQiOjE3NjkzNDA2NjcsImV4cCI6MTc2OTQyNzA2N30.hhPPAjfPmlGYrDjCojF4gZzp3zBtWHW9d5fJZ1C8qkM
+# testuser2 token
+@conversationId = 6973a1fc311be40f68538f6a
+
+### Get all conversations
+GET {{baseUrl}}/conversations
+Authorization: Bearer {{token}}
+
+### Create new conversation
+POST {{baseUrl}}/conversations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "participantId": "696e4a04f71ca9f5dd66c597"
+# gojotoken
+}
+
+### Get specific conversation
+GET {{baseUrl}}/conversations/{{conversationId}}
+Authorization: Bearer {{token}}
+
+### Get messages (paginated)
+GET {{baseUrl}}/conversations/{{conversationId}}/messages?page=1&limit=5
+Authorization: Bearer {{token}}
+
+### Mark conversation as read
+PUT {{baseUrl}}/conversations/{{conversationId}}/read
+Authorization: Bearer {{token}}
+
+### Edit message
+PUT {{baseUrl}}/messages/6973a28a094b3a593641fd85
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "content": "Updated message content"
+}
+
+### Delete message
+DELETE {{baseUrl}}/messages/6973a28a094b3a593641fd85
+Authorization: Bearer {{token}}

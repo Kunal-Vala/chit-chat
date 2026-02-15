@@ -7,12 +7,13 @@ import cors from "cors";
 import { FRONTEND } from './src/config/env';
 import { createServer } from 'http';
 import { Server } from "socket.io";
+import { setupChatHandlers } from './src/socket/chatHandler';
 
 
 const app = express();
 const httpServer = createServer(app);
 
-const allowedOrigins = (FRONTEND || 'http://localhost:3001,http://localhost:5173,http://localhost:4173')
+const allowedOrigins = (FRONTEND || 'http://localhost:3001,http://localhost:5173,http://localhost:4173,http://127.0.0.1:3000')
   .split(',')
   .map((s) => s.trim());
 
@@ -34,17 +35,10 @@ app.use('/api/auth', AuthRouter);
 app.use('/api/user', UserRouter);
 
 // Socket.io Connection Handling
-
-io.on('connection', (socket) => {
-  console.log("User Connected :", socket.id);
-
-  socket.on('disconnect', () => {
-    console.log("User Disconnected", socket.id);
-  });
-});
+setupChatHandlers(io);
 
 // Start server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 connectDB().then(() => {
   httpServer.listen(PORT, () => {
