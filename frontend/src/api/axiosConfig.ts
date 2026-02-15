@@ -6,7 +6,7 @@ import axios, { type AxiosInstance, AxiosError } from 'axios'
  * and react to auth failures so debugging auth flows is straightforward.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5000/api'
 // Shared token key so app state and axios stay aligned
 export const TOKEN_STORAGE_KEY = 'auth_token'
 
