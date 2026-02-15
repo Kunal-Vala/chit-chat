@@ -14,3 +14,48 @@ export interface FriendRequest {
     createdAt?: Date
 }
 
+export type MessageType = 'text' | 'image' | 'file'
+export type DeliveryStatus = 'sent' | 'delivered' | 'read'
+
+export interface MessageSummary {
+    _id: string
+    content: string
+    messageType: MessageType
+    sentAt: string
+    senderId: string
+}
+
+export interface Conversation {
+    _id: string
+    participants: UserProfile[]
+    conversationType: 'direct' | 'group'
+    lastMessageId?: MessageSummary | string
+    createdAt?: string
+    updatedAt?: string
+}
+
+export interface ChatMessage {
+    _id: string
+    conversationId: string
+    senderId: UserProfile | string
+    content: string
+    messageType: MessageType
+    mediaUrl?: string
+    deliveryStatus: DeliveryStatus
+    sentAt: string
+    deliveredAt?: string
+    readAt?: string
+    readBy?: string[]
+    isEdited?: boolean
+    editedAt?: string
+    isDeleted?: boolean
+    deletedAt?: string
+}
+
+export interface PaginationInfo {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+}
+
