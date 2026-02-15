@@ -4,6 +4,7 @@ import Sign_In from "./pages/Sign_In";
 import Profile from "./pages/Profile";
 import SearchUsers from "./pages/SearchUsers";
 import FriendsManager from "./pages/FriendsManager";
+import Chat from "./pages/Chat";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
@@ -18,6 +19,7 @@ function AppShell() {
                         <>
                             <li><Link to="/search" className="text-blue-600 hover:text-blue-800">Search Users</Link></li>
                             <li><Link to="/friends" className="text-blue-600 hover:text-blue-800">Friends</Link></li>
+                            <li><Link to="/chat" className="text-blue-600 hover:text-blue-800">Chat</Link></li>
                             <li><Link to={`/user/${user?.userId}`} className="text-blue-600 hover:text-blue-800">Profile</Link></li>
                             <li className="ml-auto text-gray-700 font-medium">{user?.username}</li>
                             <li><button onClick={logout} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Logout</button></li>
@@ -39,6 +41,7 @@ function AppShell() {
                     <Route element={<ProtectedRoute />}> 
                         <Route path="/search" element={<SearchUsers />} />
                         <Route path="/friends" element={<FriendsManager />} />
+                        <Route path="/chat" element={<Chat />} />
                         <Route path="/user/:userId" element={<Profile />} />
                         <Route path="/users/:userId" element={<Profile />} />
                     </Route>
