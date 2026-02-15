@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { connectChatSocket, disconnectChatSocket } from '../socket/chatSocket'
-import { getMessages, getUserConversations, markConversationAsRead } from '../api/chatApi'
+import { deleteMessage, getMessages, getUserConversations, markConversationAsRead } from '../api/chatApi'
 import type { ChatMessage, Conversation, MessageSummary } from '../types'
 
 const formatTime = (iso?: string) => {
@@ -39,6 +39,8 @@ function Chat() {
   const [error, setError] = useState<string | null>(null)
   const [messageInput, setMessageInput] = useState('')
   const [typingUsers, setTypingUsers] = useState<Array<{ userId: string; username: string }>>([])
+  const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set())
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
 
   const activeConversationRef = useRef<string | null>(null)
   const userIdRef = useRef<string | null>(user?.userId ?? null)
@@ -223,6 +225,39 @@ function Chat() {
     }, 1200)
   }
 
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      await deleteMessage(messageId)
+      setMessages((prev) => prev.filter((msg) => msg._id !== messageId))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete message')
+    }
+  }
+
+  const handleCopyMessage = async (messageId: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopiedMessageId(messageId)
+      window.setTimeout(() => {
+        setCopiedMessageId((prev) => (prev === messageId ? null : prev))
+      }, 1200)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to copy message')
+    }
+  }
+
+  const toggleMessageExpanded = (messageId: string) => {
+    setExpandedMessages((prev) => {
+      const next = new Set(prev)
+      if (next.has(messageId)) {
+        next.delete(messageId)
+      } else {
+        next.add(messageId)
+      }
+      return next
+    })
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <section className="lg:col-span-1 bg-white rounded-lg shadow p-4">
@@ -299,16 +334,65 @@ function Chat() {
               ) : (
                 messages.map((msg) => {
                   const isOwn = getSenderId(msg.senderId) === user?.userId
+                  const isExpanded = expandedMessages.has(msg._id)
+                  const isLong = msg.content.length > 300
+                  const displayContent = isLong && !isExpanded ? `${msg.content.slice(0, 300)}...` : msg.content
+                  const isCopied = copiedMessageId === msg._id
                   return (
                     <div key={msg._id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[70%] rounded-lg px-4 py-2 break-words whitespace-pre-wrap ${isOwn ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'}`}>
-                        <p className="text-sm break-words whitespace-pre-wrap">{msg.content}</p>
-                        <div className="mt-1 text-[11px] flex items-center justify-end gap-2 opacity-80">
+                      <div
+                        className={`group max-w-[70%] rounded-lg px-4 py-2 break-words whitespace-pre-wrap ${isOwn ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'} ${isCopied ? (isOwn ? 'ring-2 ring-blue-200' : 'ring-2 ring-blue-400') : ''}`}
+                      >
+                        <p className="text-sm break-words whitespace-pre-wrap">{displayContent}</p>
+                        {isLong && (
+                          <button
+                            type="button"
+                            onClick={() => toggleMessageExpanded(msg._id)}
+                            className={`mt-1 text-xs ${isOwn ? 'text-blue-100' : 'text-blue-600'} hover:underline`}
+                          >
+                            {isExpanded ? 'Show less' : 'Read more'}
+                          </button>
+                        )}
+                        <div className="mt-2 text-[11px] flex items-center justify-end gap-2 opacity-80">
                           <span>{formatTime(msg.sentAt)}</span>
                           {isOwn && (
                             <span>{msg.deliveryStatus === 'read' ? '✓✓' : msg.deliveryStatus === 'delivered' ? '✓✓' : '✓'}</span>
                           )}
                           {msg.isEdited && <span>(edited)</span>}
+                        </div>
+                        <div className="mt-1 flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {isCopied && (
+                            <span className={`text-xs ${isOwn ? 'text-blue-100' : 'text-blue-600'}`}>
+                              Copied!
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleCopyMessage(msg._id, msg.content)}
+                            className={`flex items-center gap-1 text-xs ${isOwn ? 'text-blue-100 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                            title="Copy message"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path d="M16 4H8a2 2 0 0 0-2 2v10" stroke="currentColor" strokeWidth="1.5" />
+                              <rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                            </svg>
+                            Copy
+                          </button>
+                          {isOwn && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteMessage(msg._id)}
+                              className="flex items-center gap-1 text-xs text-red-200 hover:text-white"
+                              title="Delete message"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M4 7h16" stroke="currentColor" strokeWidth="1.5" />
+                                <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" stroke="currentColor" strokeWidth="1.5" />
+                                <path d="M7 7l1 12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-12" stroke="currentColor" strokeWidth="1.5" />
+                              </svg>
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
