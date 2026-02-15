@@ -92,7 +92,7 @@ export const sign_in = async (req: Request<object, object, SignInBody>, res: Res
         },
             JWT_SECRET,
             { 
-                expiresIn: '1d',
+                expiresIn: '7d',
                 algorithm: 'HS256'
             }
         );
