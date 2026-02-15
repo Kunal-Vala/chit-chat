@@ -138,7 +138,7 @@ export const setupChatHandlers = (io: Server) => {
                     messageId,
                     {
                         deliveryStatus: 'delivered',
-                        sentAt: new Date(),
+                        deliveredAt: new Date(),
                     },
                     { new: true }
                 );
