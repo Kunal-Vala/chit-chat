@@ -3,7 +3,6 @@ import { AuthenticatedRequest } from "../types";
 import Conversation from "../models/Conversation";
 import Message from "../models/Message";
 import User from "../models/User";
-import { error } from "node:console";
 
 // GET api/chat/conversation - get all user's conversation
 
@@ -95,11 +94,11 @@ export const getConversation = async (req: AuthenticatedRequest, res: Response) 
             return res.status(400).json({ error: 'Conversation not found' });
         }
 
-        res.json({ conversation });
+        return res.json({ conversation });
 
     } catch (error) {
         console.error('Error fetching conversation:', error);
-        res.status(500).json({ error: 'Failed to fetch conversation' });
+        return res.status(500).json({ error: 'Failed to fetch conversation' });
     }
 };
 
@@ -119,7 +118,7 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
         });
 
         if (!conversation) {
-            res.status(404).json({ error: 'Conversation not found' });
+            return res.status(404).json({ error: 'Conversation not found' });
         }
 
         const pageNum = parseInt(page as string);
@@ -141,7 +140,7 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
             isDeleted: { $ne: true }
         });
 
-        res.json({
+        return res.json({
             message: message.reverse(),
             pagination: {
                 page: pageNum,
@@ -152,95 +151,95 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
         });
     } catch (error) {
         console.error('Error fetching messages:', error);
-        res.status(500).json({ error: 'Failed to fetch messages' });
+        return res.status(500).json({ error: 'Failed to fetch messages' });
     }
 };
 
 // DELETE /api/chat/messages/:messageId - Delete message
 export const deleteMessage = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const userId = req.user?.userId;
-    const { messageId } = req.params;
+    try {
+        const userId = req.user?.userId;
+        const { messageId } = req.params;
 
-    const message = await Message.findOne({
-      _id: messageId,
-      senderId: userId // Only sender can delete
-    });
+        const message = await Message.findOne({
+            _id: messageId,
+            senderId: userId // Only sender can delete
+        });
 
-    if (!message) {
-      return res.status(404).json({ error: 'Message not found or unauthorized' });
+        if (!message) {
+            return res.status(404).json({ error: 'Message not found or unauthorized' });
+        }
+
+        // Soft delete
+        message.isDeleted = true;
+        message.deletedAt = new Date();
+        await message.save();
+
+        return res.json({ message: 'Message deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting message:', error);
+        return res.status(500).json({ error: 'Failed to delete message' });
     }
-
-    // Soft delete
-    message.isDeleted = true;
-    message.deletedAt = new Date();
-    await message.save();
-
-    res.json({ message: 'Message deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting message:', error);
-    res.status(500).json({ error: 'Failed to delete message' });
-  }
 };
 
 // PUT /api/chat/messages/:messageId - Edit message
 export const editMessage = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const userId = req.user?.userId;
-    const { messageId } = req.params;
-    const { content } = req.body;
+    try {
+        const userId = req.user?.userId;
+        const { messageId } = req.params;
+        const { content } = req.body;
 
-    if (!content?.trim()) {
-      return res.status(400).json({ error: 'Content required' });
+        if (!content?.trim()) {
+            return res.status(400).json({ error: 'Content required' });
+        }
+
+        const message = await Message.findOneAndUpdate(
+            {
+                _id: messageId,
+                senderId: userId // Only sender can edit
+            },
+            {
+                content,
+                isEdited: true,
+                editedAt: new Date()
+            },
+            { new: true }
+        );
+
+        if (!message) {
+             return res.status(404).json({ error: 'Message not found or unauthorized' });
+        }
+
+        return res.json({ message });
+    } catch (error) {
+        console.error('Error editing message:', error);
+        return res.status(500).json({ error: 'Failed to edit message' });
     }
-
-    const message = await Message.findOneAndUpdate(
-      {
-        _id: messageId,
-        senderId: userId // Only sender can edit
-      },
-      {
-        content,
-        isEdited: true,
-        editedAt: new Date()
-      },
-      { new: true }
-    );
-
-    if (!message) {
-      return res.status(404).json({ error: 'Message not found or unauthorized' });
-    }
-
-    res.json({ message });
-  } catch (error) {
-    console.error('Error editing message:', error);
-    res.status(500).json({ error: 'Failed to edit message' });
-  }
 };
 
 // PUT /api/chat/conversations/:conversationId/read - Mark all messages as read
 export const markConversationAsRead = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const userId = req.user?.userId;
-    const { conversationId } = req.params;
+    try {
+        const userId = req.user?.userId;
+        const { conversationId } = req.params;
 
-    // Update all unread messages
-    await Message.updateMany(
-      {
-        conversationId,
-        senderId: { $ne: userId }, // Not sent by current user
-        readBy: { $ne: userId } // Not already read
-      },
-      {
-        $addToSet: { readBy: userId },
-        deliveryStatus: 'read',
-        readAt: new Date()
-      }
-    );
+        // Update all unread messages
+        await Message.updateMany(
+            {
+                conversationId,
+                senderId: { $ne: userId }, // Not sent by current user
+                readBy: { $ne: userId } // Not already read
+            },
+            {
+                $addToSet: { readBy: userId },
+                deliveryStatus: 'read',
+                readAt: new Date()
+            }
+        );
 
-    res.json({ message: 'Conversation marked as read' });
-  } catch (error) {
-    console.error('Error marking as read:', error);
-    res.status(500).json({ error: 'Failed to mark as read' });
-  }
+        res.json({ message: 'Conversation marked as read' });
+    } catch (error) {
+        console.error('Error marking as read:', error);
+        res.status(500).json({ error: 'Failed to mark as read' });
+    }
 };
