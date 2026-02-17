@@ -344,16 +344,16 @@ function Chat() {
   }
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-amber-50 p-4 shadow-sm md:p-6 h-[calc(100vh-8rem)] overflow-hidden">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-0">
-        <section className={`lg:col-span-1 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur flex flex-col h-full min-h-0 ${showMessagesInMobile ? 'hidden lg:flex' : 'flex'}`}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-900">Conversations</h2>
-            <span className="text-xs uppercase tracking-wide text-slate-400">Direct</span>
+    <div className="h-[calc(100vh-64px)] w-full overflow-hidden bg-gray-100">
+      <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-0 h-full min-h-0">
+        <section className={`border-r border-slate-200 bg-white p-4 flex flex-col h-full min-h-0 ${showMessagesInMobile ? 'hidden lg:flex' : 'flex'}`}>
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
+            <h2 className="text-base font-semibold text-slate-900">Messages</h2>
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Direct</span>
           </div>
-        {loadingConversations && <div className="text-sm text-gray-500">Loading conversations...</div>}
+        {loadingConversations && <div className="text-sm text-slate-500">Loading conversations...</div>}
         {error && <div className="text-sm text-red-600 mb-2">{error}</div>}
-        <div className="space-y-2 flex-1 overflow-y-auto pr-1">
+        <div className="space-y-1 flex-1 overflow-y-auto pr-1">
           {conversations.map((conv) => {
             const lastMessage = getLastMessageSummary(conv)
             const isActive = conv._id === activeConversationId
@@ -368,33 +368,33 @@ function Chat() {
                   [conv._id]: 0,
                 }))
               }}
-              className={`w-full text-left p-3 rounded-xl border transition ${isActive ? 'border-blue-500/60 bg-blue-50 shadow-sm' : 'border-transparent hover:border-slate-200 hover:bg-white'}`}
+              className={`w-full text-left p-3 rounded-xl transition ${isActive ? 'bg-blue-50 shadow-sm' : 'hover:bg-slate-50'}`}
             >
                 <div className="flex items-center gap-3 min-w-0">
                   {getParticipantAvatar(conv, user?.userId) ? (
                     <img
                       src={getParticipantAvatar(conv, user?.userId) as string}
                       alt={getParticipantLabel(conv, user?.userId)}
-                      className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow"
+                      className="w-11 h-11 rounded-full object-cover ring-2 ring-white shadow-sm"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-semibold text-slate-600 ring-2 ring-white shadow">
+                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-sm font-semibold text-white shadow-sm">
                       {getParticipantLabel(conv, user?.userId).charAt(0).toUpperCase()}
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-900">{getParticipantLabel(conv, user?.userId)}</span>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="font-semibold text-[15px] text-slate-900">{getParticipantLabel(conv, user?.userId)}</span>
                       <div className="flex items-center gap-2">
                         {unreadCounts[conv._id] > 0 && (
-                          <span className="bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                          <span className="bg-blue-600 text-white text-[11px] font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">
                             {unreadCounts[conv._id] > 99 ? '99+' : unreadCounts[conv._id]}
                           </span>
                         )}
-                        <span className="text-xs text-slate-400">{formatTime(lastMessage?.sentAt)}</span>
+                        <span className="text-[11px] text-slate-400">{formatTime(lastMessage?.sentAt)}</span>
                       </div>
                     </div>
-                    <p className="text-sm text-slate-500 truncate">
+                    <p className="text-[13px] text-slate-500 truncate">
                       {lastMessage ? lastMessage.content : 'No messages yet'}
                     </p>
                   </div>
@@ -408,13 +408,13 @@ function Chat() {
         </div>
       </section>
 
-      <section className={`lg:col-span-2 rounded-2xl border border-slate-200 bg-white/90 shadow-sm backdrop-blur flex flex-col h-full min-h-0 ${showMessagesInMobile ? 'flex' : 'hidden lg:flex'}`}>
+      <section className={`bg-slate-50 flex flex-col h-full min-h-0 ${showMessagesInMobile ? 'flex' : 'hidden lg:flex'}`}>
         {activeConversation ? (
           <>
-            <header className="border-b border-slate-200/70 px-5 py-4 flex items-center gap-3 shrink-0">
+            <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center gap-3 shrink-0 shadow-sm">
               <button
                 onClick={() => setShowMessagesInMobile(false)}
-                className="lg:hidden p-2 -ml-2 text-slate-600 hover:text-slate-900"
+                className="lg:hidden p-2 -ml-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition"
                 title="Back to conversations"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -425,26 +425,25 @@ function Chat() {
                 <img
                   src={getParticipantAvatar(activeConversation, user?.userId) as string}
                   alt={getParticipantLabel(activeConversation, user?.userId)}
-                  className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow"
+                  className="w-11 h-11 rounded-full object-cover ring-2 ring-white shadow"
                 />
               ) : (
-                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-lg font-semibold text-slate-600 ring-2 ring-white shadow">
+                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-lg font-semibold text-white shadow">
                   {getParticipantLabel(activeConversation, user?.userId).charAt(0).toUpperCase()}
                 </div>
               )}
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-slate-900">{getParticipantLabel(activeConversation, user?.userId)}</h3>
+                <h3 className="text-base font-semibold text-slate-900">{getParticipantLabel(activeConversation, user?.userId)}</h3>
                 {typingUsers.length > 0 && (
-                  <p className="text-sm text-blue-500">{typingUsers.map((u) => u.username).join(', ')} typing...</p>
+                  <p className="text-xs text-blue-500">{typingUsers.map((u) => u.username).join(', ')} typing...</p>
                 )}
               </div>
-              <div className="hidden md:flex items-center gap-2 text-xs text-slate-400">
-                <span className="rounded-full bg-emerald-100 px-2 py-1 text-emerald-700">Online</span>
-                <span className="rounded-full bg-slate-100 px-2 py-1">Secure</span>
+              <div className="hidden md:flex items-center gap-2 text-xs">
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 font-medium">Online</span>
               </div>
             </header>
 
-            <div className="flex-1 min-h-0 overflow-y-auto space-y-4 px-5 py-4">
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
               {loadingMessages ? (
                 <div className="text-sm text-slate-500">Loading messages...</div>
               ) : (
@@ -458,36 +457,36 @@ function Chat() {
                   const showDateDivider = !previous || !isSameDay(new Date(previous.sentAt), new Date(msg.sentAt))
                   const showUnreadDivider = firstUnreadMessageId === msg._id
                   return (
-                    <div key={msg._id}>
+                    <div key={msg._id} className="mb-4">
                       {showDateDivider && (
-                        <div className="flex items-center justify-center">
-                          <span className="px-3 py-1 text-xs text-slate-500 bg-slate-100 rounded-full">
+                        <div className="flex items-center justify-center my-6">
+                          <span className="px-4 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-full shadow-sm">
                             {formatDateLabel(msg.sentAt)}
                           </span>
                         </div>
                       )}
                       {showUnreadDivider && (
-                        <div className="flex items-center gap-2 text-xs text-red-500">
-                          <span className="flex-1 h-px bg-red-200" />
-                          <span className="px-2 py-1 bg-red-50 rounded-full">Unread messages</span>
-                          <span className="flex-1 h-px bg-red-200" />
+                        <div className="flex items-center gap-3 text-xs text-red-600 my-6">
+                          <span className="flex-1 h-px bg-red-300" />
+                          <span className="px-3 py-1 bg-red-50 border border-red-200 rounded-full font-medium">Unread messages</span>
+                          <span className="flex-1 h-px bg-red-300" />
                         </div>
                       )}
                       <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                         <div
-                          className={`group max-w-[70%] rounded-2xl px-4 py-3 shadow-sm break-words whitespace-pre-wrap ${isOwn ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white' : 'bg-white text-slate-900 border border-slate-200'} ${isCopied ? (isOwn ? 'ring-2 ring-blue-200' : 'ring-2 ring-blue-400') : ''}`}
+                          className={`group max-w-[600px] rounded-2xl px-4 py-2.5 break-words whitespace-pre-wrap ${isOwn ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-900 border border-slate-200 shadow-sm'} ${isCopied ? (isOwn ? 'ring-2 ring-blue-300' : 'ring-2 ring-blue-400') : ''}`}
                         >
-                          <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{displayContent}</p>
+                          <p className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">{displayContent}</p>
                           {isLong && (
                             <button
                               type="button"
                               onClick={() => toggleMessageExpanded(msg._id)}
-                              className={`mt-1 text-xs ${isOwn ? 'text-blue-100' : 'text-blue-600'} hover:underline`}
+                              className={`mt-1.5 text-xs font-medium ${isOwn ? 'text-blue-100 hover:text-white' : 'text-blue-600 hover:text-blue-700'} hover:underline`}
                             >
                               {isExpanded ? 'Show less' : 'Read more'}
                             </button>
                           )}
-                          <div className="mt-2 text-[11px] flex items-center justify-end gap-2 opacity-80">
+                          <div className="mt-1.5 text-[11px] flex items-center justify-end gap-1.5 opacity-70">
                             <span>{formatTime(msg.sentAt)}</span>
                             {isOwn && (
                               <span>{msg.deliveryStatus === 'read' ? '✓✓' : msg.deliveryStatus === 'delivered' ? '✓✓' : '✓'}</span>
@@ -537,12 +536,12 @@ function Chat() {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="border-t border-slate-200/70 px-5 py-4 shrink-0">
-              <div className="relative flex items-end gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+            <div className="bg-white border-t border-slate-200 px-6 py-4 shrink-0">
+              <div className="relative flex items-end gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition">
                 <button
                   type="button"
                   onClick={() => setShowEmojiPicker((prev) => !prev)}
-                  className="p-2 text-slate-500 hover:text-slate-900"
+                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
                   title="Add emoji"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -571,11 +570,12 @@ function Chat() {
                   onChange={(e) => handleMessageInputChange(e.target.value)}
                   onKeyDown={handleMessageKeyDown}
                   placeholder="Type a message..."
-                  className="flex-1 resize-none bg-transparent px-2 py-2 text-sm leading-relaxed text-slate-800 focus:outline-none"
+                  className="flex-1 resize-none bg-transparent px-2 py-1 text-[15px] leading-relaxed text-slate-900 placeholder:text-slate-400 focus:outline-none"
                 />
                 <button
                   onClick={handleSendMessage}
-                  className="rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:shadow-md"
+                  disabled={!messageInput.trim()}
+                  className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   Send
                 </button>
@@ -583,17 +583,19 @@ function Chat() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8">
-            <div className="max-w-md text-center space-y-4">
-              <div className="mx-auto w-24 h-24 rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" className="text-blue-400">
+          <div className="flex-1 flex flex-col items-center justify-center p-8">
+            <div className="max-w-md text-center space-y-5">
+              <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" className="text-blue-500">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-slate-900">No conversation selected</h3>
-              <p className="text-sm text-slate-500">
-                Choose a conversation from the list to start chatting, or go to the friends list to start a new conversation.
-              </p>
+              <div>
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">No conversation selected</h3>
+                <p className="text-sm text-slate-500">
+                  Choose a conversation from the list to start chatting, or go to the friends list to start a new conversation.
+                </p>
+              </div>
             </div>
           </div>
         )}

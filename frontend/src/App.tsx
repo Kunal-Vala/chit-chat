@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
 import Register from "./pages/Register";
 import Sign_In from "./pages/Sign_In";
 import Profile from "./pages/Profile";
@@ -10,6 +10,8 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 
 function AppShell() {
     const { user, isAuthenticated, logout } = useAuth()
+    const location = useLocation()
+    const isChatPage = location.pathname === '/chat'
 
     return (
         <div className="min-h-screen bg-gray-100">
@@ -33,7 +35,7 @@ function AppShell() {
                 </ul>
             </nav>
 
-            <main className="max-w-7xl mx-auto px-4 py-8">
+            <main className={isChatPage ? "" : "max-w-7xl mx-auto px-4 py-8"}>
                 <Routes>
                     <Route path="/" element={<Navigate to={isAuthenticated ? "/search" : "/login"} replace />} />
                     <Route path="/register" element={isAuthenticated ? <Navigate to="/search" replace /> : <Register />} />

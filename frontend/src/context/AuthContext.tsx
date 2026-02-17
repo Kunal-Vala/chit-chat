@@ -44,6 +44,7 @@ const extractApiErrorMessage = (data: ApiErrorData | undefined, fallback: string
 
 type AuthContextType = {
   user: AuthUser | null
+  userId: string | null
   token: string | null
   isAuthenticated: boolean
   rememberMe: boolean
@@ -223,6 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value = useMemo<AuthContextType>(() => ({
     user,
+    userId: user?.userId ?? null,
     token,
     isAuthenticated: !!token,
     rememberMe,
