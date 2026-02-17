@@ -62,6 +62,7 @@ function Chat() {
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set())
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({})
+  const [showMessagesInMobile, setShowMessagesInMobile] = useState(false)
 
   const activeConversationRef = useRef<string | null>(null)
   const userIdRef = useRef<string | null>(user?.userId ?? null)
@@ -119,9 +120,7 @@ function Chat() {
         setLoadingConversations(true)
         const data = await getUserConversations()
         setConversations(data)
-        if (data.length > 0) {
-          setActiveConversationId((prev) => prev ?? data[0]._id)
-        }
+        // Don't auto-select first conversation - let user choose
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load conversations')
       } finally {
@@ -347,7 +346,7 @@ function Chat() {
   return (
     <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-amber-50 p-4 shadow-sm md:p-6 h-[calc(100vh-8rem)] overflow-hidden">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-0">
-        <section className="lg:col-span-1 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur flex flex-col h-full min-h-0">
+        <section className={`lg:col-span-1 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur flex flex-col h-full min-h-0 ${showMessagesInMobile ? 'hidden lg:flex' : 'flex'}`}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-slate-900">Conversations</h2>
             <span className="text-xs uppercase tracking-wide text-slate-400">Direct</span>
@@ -363,6 +362,7 @@ function Chat() {
               key={conv._id}
               onClick={() => {
                 setActiveConversationId(conv._id)
+                setShowMessagesInMobile(true)
                 setUnreadCounts((prev) => ({
                   ...prev,
                   [conv._id]: 0,
@@ -408,10 +408,19 @@ function Chat() {
         </div>
       </section>
 
-      <section className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white/90 shadow-sm backdrop-blur flex flex-col h-full min-h-0">
+      <section className={`lg:col-span-2 rounded-2xl border border-slate-200 bg-white/90 shadow-sm backdrop-blur flex flex-col h-full min-h-0 ${showMessagesInMobile ? 'flex' : 'hidden lg:flex'}`}>
         {activeConversation ? (
           <>
             <header className="border-b border-slate-200/70 px-5 py-4 flex items-center gap-3 shrink-0">
+              <button
+                onClick={() => setShowMessagesInMobile(false)}
+                className="lg:hidden p-2 -ml-2 text-slate-600 hover:text-slate-900"
+                title="Back to conversations"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
               {getParticipantAvatar(activeConversation, user?.userId) ? (
                 <img
                   src={getParticipantAvatar(activeConversation, user?.userId) as string}
@@ -574,7 +583,19 @@ function Chat() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-slate-500">Select a conversation to start chatting.</div>
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8">
+            <div className="max-w-md text-center space-y-4">
+              <div className="mx-auto w-24 h-24 rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" className="text-blue-400">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-slate-900">No conversation selected</h3>
+              <p className="text-sm text-slate-500">
+                Choose a conversation from the list to start chatting, or go to the friends list to start a new conversation.
+              </p>
+            </div>
+          </div>
         )}
       </section>
     </div>
