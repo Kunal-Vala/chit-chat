@@ -12,6 +12,21 @@ const formatTime = (iso?: string) => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
+const isSameDay = (left: Date, right: Date) =>
+  left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth() && left.getDate() === right.getDate()
+
+const formatDateLabel = (iso?: string) => {
+  if (!iso) return ''
+  const date = new Date(iso)
+  const now = new Date()
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+
+  if (isSameDay(date, now)) return 'Today'
+  if (isSameDay(date, yesterday)) return 'Yesterday'
+  return date.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
 const getSenderId = (senderId: ChatMessage['senderId']) => (typeof senderId === 'string' ? senderId : senderId._id)
 
 const getParticipantLabel = (conversation: Conversation, currentUserId?: string) => {
@@ -239,6 +254,15 @@ function Chat() {
     [conversations, activeConversationId]
   )
 
+  const firstUnreadMessageId = useMemo(() => {
+    const currentUserId = user?.userId
+    if (!currentUserId) return null
+    const firstUnread = messages.find(
+      (msg) => getSenderId(msg.senderId) !== currentUserId && msg.deliveryStatus !== 'read'
+    )
+    return firstUnread?._id ?? null
+  }, [messages, user?.userId])
+
   const handleSendMessage = () => {
     if (!messageInput.trim() || !activeConversationId || !token) return
     const socket = connectChatSocket(token)
@@ -402,67 +426,86 @@ function Chat() {
               {loadingMessages ? (
                 <div className="text-sm text-slate-500">Loading messages...</div>
               ) : (
-                messages.map((msg) => {
+                messages.map((msg, index) => {
                   const isOwn = getSenderId(msg.senderId) === user?.userId
                   const isExpanded = expandedMessages.has(msg._id)
                   const isLong = msg.content.length > 300
                   const displayContent = isLong && !isExpanded ? `${msg.content.slice(0, 300)}...` : msg.content
                   const isCopied = copiedMessageId === msg._id
+                  const previous = messages[index - 1]
+                  const showDateDivider = !previous || !isSameDay(new Date(previous.sentAt), new Date(msg.sentAt))
+                  const showUnreadDivider = firstUnreadMessageId === msg._id
                   return (
-                    <div key={msg._id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                      <div
-                        className={`group max-w-[70%] rounded-2xl px-4 py-3 shadow-sm break-words whitespace-pre-wrap ${isOwn ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white' : 'bg-white text-slate-900 border border-slate-200'} ${isCopied ? (isOwn ? 'ring-2 ring-blue-200' : 'ring-2 ring-blue-400') : ''}`}
-                      >
-                        <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{displayContent}</p>
-                        {isLong && (
-                          <button
-                            type="button"
-                            onClick={() => toggleMessageExpanded(msg._id)}
-                            className={`mt-1 text-xs ${isOwn ? 'text-blue-100' : 'text-blue-600'} hover:underline`}
-                          >
-                            {isExpanded ? 'Show less' : 'Read more'}
-                          </button>
-                        )}
-                        <div className="mt-2 text-[11px] flex items-center justify-end gap-2 opacity-80">
-                          <span>{formatTime(msg.sentAt)}</span>
-                          {isOwn && (
-                            <span>{msg.deliveryStatus === 'read' ? '✓✓' : msg.deliveryStatus === 'delivered' ? '✓✓' : '✓'}</span>
-                          )}
-                          {msg.isEdited && <span>(edited)</span>}
+                    <div key={msg._id}>
+                      {showDateDivider && (
+                        <div className="flex items-center justify-center">
+                          <span className="px-3 py-1 text-xs text-slate-500 bg-slate-100 rounded-full">
+                            {formatDateLabel(msg.sentAt)}
+                          </span>
                         </div>
-                        <div className="mt-1 flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {isCopied && (
-                            <span className={`text-xs ${isOwn ? 'text-blue-100' : 'text-blue-600'}`}>
-                              Copied!
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleCopyMessage(msg._id, msg.content)}
-                            className={`flex items-center gap-1 text-xs ${isOwn ? 'text-blue-100 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
-                            title="Copy message"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                              <path d="M16 4H8a2 2 0 0 0-2 2v10" stroke="currentColor" strokeWidth="1.5" />
-                              <rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
-                            </svg>
-                            Copy
-                          </button>
-                          {isOwn && (
+                      )}
+                      {showUnreadDivider && (
+                        <div className="flex items-center gap-2 text-xs text-red-500">
+                          <span className="flex-1 h-px bg-red-200" />
+                          <span className="px-2 py-1 bg-red-50 rounded-full">Unread messages</span>
+                          <span className="flex-1 h-px bg-red-200" />
+                        </div>
+                      )}
+                      <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                        <div
+                          className={`group max-w-[70%] rounded-2xl px-4 py-3 shadow-sm break-words whitespace-pre-wrap ${isOwn ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white' : 'bg-white text-slate-900 border border-slate-200'} ${isCopied ? (isOwn ? 'ring-2 ring-blue-200' : 'ring-2 ring-blue-400') : ''}`}
+                        >
+                          <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{displayContent}</p>
+                          {isLong && (
                             <button
                               type="button"
-                              onClick={() => handleDeleteMessage(msg._id)}
-                              className="flex items-center gap-1 text-xs text-red-200 hover:text-white"
-                              title="Delete message"
+                              onClick={() => toggleMessageExpanded(msg._id)}
+                              className={`mt-1 text-xs ${isOwn ? 'text-blue-100' : 'text-blue-600'} hover:underline`}
                             >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                <path d="M4 7h16" stroke="currentColor" strokeWidth="1.5" />
-                                <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" stroke="currentColor" strokeWidth="1.5" />
-                                <path d="M7 7l1 12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-12" stroke="currentColor" strokeWidth="1.5" />
-                              </svg>
-                              Delete
+                              {isExpanded ? 'Show less' : 'Read more'}
                             </button>
                           )}
+                          <div className="mt-2 text-[11px] flex items-center justify-end gap-2 opacity-80">
+                            <span>{formatTime(msg.sentAt)}</span>
+                            {isOwn && (
+                              <span>{msg.deliveryStatus === 'read' ? '✓✓' : msg.deliveryStatus === 'delivered' ? '✓✓' : '✓'}</span>
+                            )}
+                            {msg.isEdited && <span>(edited)</span>}
+                          </div>
+                          <div className="mt-1 flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {isCopied && (
+                              <span className={`text-xs ${isOwn ? 'text-blue-100' : 'text-blue-600'}`}>
+                                Copied!
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleCopyMessage(msg._id, msg.content)}
+                              className={`flex items-center gap-1 text-xs ${isOwn ? 'text-blue-100 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
+                              title="Copy message"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M16 4H8a2 2 0 0 0-2 2v10" stroke="currentColor" strokeWidth="1.5" />
+                                <rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                              </svg>
+                              Copy
+                            </button>
+                            {isOwn && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteMessage(msg._id)}
+                                className="flex items-center gap-1 text-xs text-red-200 hover:text-white"
+                                title="Delete message"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                  <path d="M4 7h16" stroke="currentColor" strokeWidth="1.5" />
+                                  <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" stroke="currentColor" strokeWidth="1.5" />
+                                  <path d="M7 7l1 12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-12" stroke="currentColor" strokeWidth="1.5" />
+                                </svg>
+                                Delete
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -490,7 +533,6 @@ function Chat() {
                 {showEmojiPicker && (
                   <div className="absolute bottom-14 left-2 z-20">
                     <EmojiPicker
-                      theme="light"
                       onEmojiClick={handleEmojiSelect}
                       searchPlaceHolder="Search"
                       height={360}
