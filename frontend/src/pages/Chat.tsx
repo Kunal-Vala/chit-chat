@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react'
 import { useAuth } from '../context/AuthContext'
 import { connectChatSocket, disconnectChatSocket } from '../socket/chatSocket'
@@ -41,6 +41,12 @@ const getParticipantAvatar = (conversation: Conversation, currentUserId?: string
   return other?.profilePictureUrl ?? null
 }
 
+const getParticipantId = (conversation: Conversation, currentUserId?: string) => {
+  if (!currentUserId) return null
+  const other = conversation.participants.find((p) => p._id !== currentUserId)
+  return other?._id ?? null
+}
+
 const getLastMessageSummary = (conversation: Conversation): MessageSummary | null => {
   if (typeof conversation.lastMessageId === 'string') return null
   return conversation.lastMessageId ?? null
@@ -49,6 +55,7 @@ const getLastMessageSummary = (conversation: Conversation): MessageSummary | nul
 function Chat() {
   const { user, token } = useAuth()
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const conversationIdFromUrl = searchParams.get('conversationId')
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConversationId, setActiveConversationId] = useState<string | null>(conversationIdFromUrl)
@@ -421,26 +428,32 @@ function Chat() {
                   <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
-              {getParticipantAvatar(activeConversation, user?.userId) ? (
-                <img
-                  src={getParticipantAvatar(activeConversation, user?.userId) as string}
-                  alt={getParticipantLabel(activeConversation, user?.userId)}
-                  className="w-11 h-11 rounded-full object-cover ring-2 ring-white shadow"
-                />
-              ) : (
-                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-lg font-semibold text-white shadow">
-                  {getParticipantLabel(activeConversation, user?.userId).charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div className="flex-1">
-                <h3 className="text-base font-semibold text-slate-900">{getParticipantLabel(activeConversation, user?.userId)}</h3>
-                {typingUsers.length > 0 && (
-                  <p className="text-xs text-blue-500">{typingUsers.map((u) => u.username).join(', ')} typing...</p>
+              <button
+                onClick={() => {
+                  const participantId = getParticipantId(activeConversation, user?.userId)
+                  if (participantId) navigate(`/user/${participantId}`)
+                }}
+                className="flex items-center gap-3 flex-1 hover:opacity-80 transition cursor-pointer"
+                title="View profile"
+              >
+                {getParticipantAvatar(activeConversation, user?.userId) ? (
+                  <img
+                    src={getParticipantAvatar(activeConversation, user?.userId) as string}
+                    alt={getParticipantLabel(activeConversation, user?.userId)}
+                    className="w-11 h-11 rounded-full object-cover ring-2 ring-white shadow"
+                  />
+                ) : (
+                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-lg font-semibold text-white shadow">
+                    {getParticipantLabel(activeConversation, user?.userId).charAt(0).toUpperCase()}
+                  </div>
                 )}
-              </div>
-              <div className="hidden md:flex items-center gap-2 text-xs">
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 font-medium">Online</span>
-              </div>
+                <div className="flex-1 text-left">
+                  <h3 className="text-base font-semibold text-slate-900">{getParticipantLabel(activeConversation, user?.userId)}</h3>
+                  {typingUsers.length > 0 && (
+                    <p className="text-xs text-blue-500">{typingUsers.map((u) => u.username).join(', ')} typing...</p>
+                  )}
+                </div>
+              </button>
             </header>
 
             <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
