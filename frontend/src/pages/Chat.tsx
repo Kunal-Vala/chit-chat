@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { connectChatSocket, disconnectChatSocket } from '../socket/chatSocket'
 import { deleteMessage, getMessages, getUserConversations, markConversationAsRead } from '../api/chatApi'
@@ -31,8 +32,10 @@ const getLastMessageSummary = (conversation: Conversation): MessageSummary | nul
 
 function Chat() {
   const { user, token } = useAuth()
+  const [searchParams] = useSearchParams()
+  const conversationIdFromUrl = searchParams.get('conversationId')
   const [conversations, setConversations] = useState<Conversation[]>([])
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(conversationIdFromUrl)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loadingConversations, setLoadingConversations] = useState(false)
   const [loadingMessages, setLoadingMessages] = useState(false)
@@ -41,11 +44,13 @@ function Chat() {
   const [typingUsers, setTypingUsers] = useState<Array<{ userId: string; username: string }>>([])
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set())
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({})
 
   const activeConversationRef = useRef<string | null>(null)
   const userIdRef = useRef<string | null>(user?.userId ?? null)
   const typingTimeout = useRef<number | null>(null)
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const [isPageVisible, setIsPageVisible] = useState(true)
 
   useEffect(() => {
     activeConversationRef.current = activeConversationId
@@ -54,6 +59,15 @@ function Chat() {
   useEffect(() => {
     userIdRef.current = user?.userId ?? null
   }, [user?.userId])
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsPageVisible(!document.hidden)
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [])
 
   useEffect(() => {
     if (!messageInputRef.current) return
@@ -83,7 +97,7 @@ function Chat() {
     if (token) {
       void loadConversations()
     }
-  }, [token])
+  }, [token, conversationIdFromUrl])
 
   useEffect(() => {
     if (!token) return
@@ -117,8 +131,16 @@ function Chat() {
           return [...prev, message]
         })
 
-        if (getSenderId(message.senderId) !== userIdRef.current) {
+        if (isPageVisible && getSenderId(message.senderId) !== userIdRef.current) {
           socket.emit('message-read', message._id)
+        }
+      } else {
+        // If conversation is not active and message is from another user, increment unread count
+        if (getSenderId(message.senderId) !== userIdRef.current) {
+          setUnreadCounts((prev) => ({
+            ...prev,
+            [message.conversationId]: (prev[message.conversationId] || 0) + 1,
+          }))
         }
       }
     }
@@ -168,20 +190,27 @@ function Chat() {
         setLoadingMessages(true)
         const data = await getMessages(activeConversationId, 1, 50)
         const currentUserId = userIdRef.current
-        const updatedMessages = data.message.map((msg) => {
-          if (currentUserId && getSenderId(msg.senderId) !== currentUserId && msg.deliveryStatus !== 'read') {
-            return { ...msg, deliveryStatus: 'read' as const, readAt: msg.readAt ?? new Date().toISOString() }
-          }
-          return msg
-        })
-        setMessages(updatedMessages)
-        await markConversationAsRead(activeConversationId)
+        
+        // Only mark as read if page is visible
+        if (isPageVisible) {
+          const updatedMessages = data.message.map((msg) => {
+            if (currentUserId && getSenderId(msg.senderId) !== currentUserId && msg.deliveryStatus !== 'read') {
+              return { ...msg, deliveryStatus: 'read' as const, readAt: msg.readAt ?? new Date().toISOString() }
+            }
+            return msg
+          })
+          setMessages(updatedMessages)
+          await markConversationAsRead(activeConversationId)
 
-        if (currentUserId) {
-          const socket = connectChatSocket(token as string)
-          data.message
-            .filter((msg) => getSenderId(msg.senderId) !== currentUserId && msg.deliveryStatus !== 'read')
-            .forEach((msg) => socket.emit('message-read', msg._id))
+          if (currentUserId) {
+            const socket = connectChatSocket(token as string)
+            data.message
+              .filter((msg) => getSenderId(msg.senderId) !== currentUserId && msg.deliveryStatus !== 'read')
+              .forEach((msg) => socket.emit('message-read', msg._id))
+          }
+        } else {
+          // If not visible, just set messages without marking as read
+          setMessages(data.message)
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load messages')
@@ -196,7 +225,7 @@ function Chat() {
       void loadMessages()
       setTypingUsers([])
     }
-  }, [activeConversationId, token])
+  }, [activeConversationId, token, isPageVisible])
 
   const activeConversation = useMemo(
     () => conversations.find((conv) => conv._id === activeConversationId) ?? null,
@@ -259,39 +288,56 @@ function Chat() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <section className="lg:col-span-1 bg-white rounded-lg shadow p-4">
-        <h2 className="text-xl font-semibold mb-4">Conversations</h2>
+    <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-amber-50 p-4 shadow-sm md:p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section className="lg:col-span-1 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-slate-900">Conversations</h2>
+            <span className="text-xs uppercase tracking-wide text-slate-400">Direct</span>
+          </div>
         {loadingConversations && <div className="text-sm text-gray-500">Loading conversations...</div>}
         {error && <div className="text-sm text-red-600 mb-2">{error}</div>}
-        <div className="space-y-3">
+        <div className="space-y-2">
           {conversations.map((conv) => {
             const lastMessage = getLastMessageSummary(conv)
             const isActive = conv._id === activeConversationId
             return (
-              <button
-                key={conv._id}
-                onClick={() => setActiveConversationId(conv._id)}
-                className={`w-full text-left p-3 rounded-lg border ${isActive ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}
-              >
+            <button
+              key={conv._id}
+              onClick={() => {
+                setActiveConversationId(conv._id)
+                setUnreadCounts((prev) => ({
+                  ...prev,
+                  [conv._id]: 0,
+                }))
+              }}
+              className={`w-full text-left p-3 rounded-xl border transition ${isActive ? 'border-blue-500/60 bg-blue-50 shadow-sm' : 'border-transparent hover:border-slate-200 hover:bg-white'}`}
+            >
                 <div className="flex items-center gap-3 min-w-0">
                   {getParticipantAvatar(conv, user?.userId) ? (
                     <img
                       src={getParticipantAvatar(conv, user?.userId) as string}
                       alt={getParticipantLabel(conv, user?.userId)}
-                      className="w-10 h-10 rounded-full object-cover"
+                      className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-semibold text-slate-600 ring-2 ring-white shadow">
                       {getParticipantLabel(conv, user?.userId).charAt(0).toUpperCase()}
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-gray-900">{getParticipantLabel(conv, user?.userId)}</span>
-                      <span className="text-xs text-gray-400">{formatTime(lastMessage?.sentAt)}</span>
+                      <span className="font-semibold text-slate-900">{getParticipantLabel(conv, user?.userId)}</span>
+                      <div className="flex items-center gap-2">
+                        {unreadCounts[conv._id] > 0 && (
+                          <span className="bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                            {unreadCounts[conv._id] > 99 ? '99+' : unreadCounts[conv._id]}
+                          </span>
+                        )}
+                        <span className="text-xs text-slate-400">{formatTime(lastMessage?.sentAt)}</span>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-600 truncate">
+                    <p className="text-sm text-slate-500 truncate">
                       {lastMessage ? lastMessage.content : 'No messages yet'}
                     </p>
                   </div>
@@ -300,37 +346,41 @@ function Chat() {
             )
           })}
           {!loadingConversations && conversations.length === 0 && (
-            <div className="text-sm text-gray-500">No conversations yet. Start a chat from the friends list.</div>
+            <div className="text-sm text-slate-500">No conversations yet. Start a chat from the friends list.</div>
           )}
         </div>
       </section>
 
-      <section className="lg:col-span-2 bg-white rounded-lg shadow p-4 flex flex-col min-h-[600px]">
+      <section className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white/90 shadow-sm backdrop-blur flex flex-col min-h-[640px]">
         {activeConversation ? (
           <>
-            <header className="border-b pb-4 mb-4 flex items-center gap-3">
+            <header className="border-b border-slate-200/70 px-5 py-4 flex items-center gap-3">
               {getParticipantAvatar(activeConversation, user?.userId) ? (
                 <img
                   src={getParticipantAvatar(activeConversation, user?.userId) as string}
                   alt={getParticipantLabel(activeConversation, user?.userId)}
-                  className="w-12 h-12 rounded-full object-cover"
+                  className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow"
                 />
               ) : (
-                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-lg font-semibold">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-lg font-semibold text-slate-600 ring-2 ring-white shadow">
                   {getParticipantLabel(activeConversation, user?.userId).charAt(0).toUpperCase()}
                 </div>
               )}
-              <div>
-                <h3 className="text-lg font-semibold">{getParticipantLabel(activeConversation, user?.userId)}</h3>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-slate-900">{getParticipantLabel(activeConversation, user?.userId)}</h3>
                 {typingUsers.length > 0 && (
                   <p className="text-sm text-blue-500">{typingUsers.map((u) => u.username).join(', ')} typing...</p>
                 )}
               </div>
+              <div className="hidden md:flex items-center gap-2 text-xs text-slate-400">
+                <span className="rounded-full bg-emerald-100 px-2 py-1 text-emerald-700">Online</span>
+                <span className="rounded-full bg-slate-100 px-2 py-1">Secure</span>
+              </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+            <div className="flex-1 overflow-y-auto space-y-4 px-5 py-4">
               {loadingMessages ? (
-                <div className="text-sm text-gray-500">Loading messages...</div>
+                <div className="text-sm text-slate-500">Loading messages...</div>
               ) : (
                 messages.map((msg) => {
                   const isOwn = getSenderId(msg.senderId) === user?.userId
@@ -341,9 +391,9 @@ function Chat() {
                   return (
                     <div key={msg._id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                       <div
-                        className={`group max-w-[70%] rounded-lg px-4 py-2 break-words whitespace-pre-wrap ${isOwn ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'} ${isCopied ? (isOwn ? 'ring-2 ring-blue-200' : 'ring-2 ring-blue-400') : ''}`}
+                        className={`group max-w-[70%] rounded-2xl px-4 py-3 shadow-sm break-words whitespace-pre-wrap ${isOwn ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white' : 'bg-white text-slate-900 border border-slate-200'} ${isCopied ? (isOwn ? 'ring-2 ring-blue-200' : 'ring-2 ring-blue-400') : ''}`}
                       >
-                        <p className="text-sm break-words whitespace-pre-wrap">{displayContent}</p>
+                        <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{displayContent}</p>
                         {isLong && (
                           <button
                             type="button"
@@ -369,7 +419,7 @@ function Chat() {
                           <button
                             type="button"
                             onClick={() => handleCopyMessage(msg._id, msg.content)}
-                            className={`flex items-center gap-1 text-xs ${isOwn ? 'text-blue-100 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                            className={`flex items-center gap-1 text-xs ${isOwn ? 'text-blue-100 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
                             title="Copy message"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -401,28 +451,31 @@ function Chat() {
               )}
             </div>
 
-            <div className="mt-4 border-t pt-4 flex items-end gap-2">
-              <textarea
-                ref={messageInputRef}
-                rows={1}
-                value={messageInput}
-                onChange={(e) => handleMessageInputChange(e.target.value)}
-                placeholder="Type a message..."
-                className="flex-1 border border-gray-300 rounded-lg px-4 py-2 resize-none leading-relaxed"
-              />
-              <button
-                onClick={handleSendMessage}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-              >
-                Send
-              </button>
+            <div className="border-t border-slate-200/70 px-5 py-4">
+              <div className="flex items-end gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                <textarea
+                  ref={messageInputRef}
+                  rows={1}
+                  value={messageInput}
+                  onChange={(e) => handleMessageInputChange(e.target.value)}
+                  placeholder="Type a message..."
+                  className="flex-1 resize-none bg-transparent px-2 py-2 text-sm leading-relaxed text-slate-800 focus:outline-none"
+                />
+                <button
+                  onClick={handleSendMessage}
+                  className="rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:shadow-md"
+                >
+                  Send
+                </button>
+              </div>
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-500">Select a conversation to start chatting.</div>
+          <div className="flex-1 flex items-center justify-center text-slate-500">Select a conversation to start chatting.</div>
         )}
       </section>
     </div>
+  </div>
   )
 }
 

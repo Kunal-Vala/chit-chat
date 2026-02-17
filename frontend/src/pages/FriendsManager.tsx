@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { FriendRequest, UserProfile } from "../types";
 import { acceptFriendRequest, deleteFriend, getFriendRequests, getFriendsList, rejectFriendRequest } from "../api/userApi";
+import { createConversation } from "../api/chatApi";
 
 function FriendsManager() {
     const navigate = useNavigate()
@@ -80,7 +81,14 @@ function FriendsManager() {
         }
     }
 
-
+    const handleStartConversation = async (friendId: string) => {
+        try {
+            const conversation = await createConversation(friendId)
+            navigate(`/chat?conversationId=${conversation._id}`)
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to start conversation')
+        }
+    }
 
 
 
@@ -134,12 +142,19 @@ function FriendsManager() {
                                     </div>
                                 </div>
 
+                                    <div className="flex gap-2">
+
+                                <button onClick={() => handleStartConversation(friend._id)}
+                                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+                                    Message
+                                </button>
                                 <button
                                     onClick={() => handleDeleteFriend(friend._id)}
                                     className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
-                                >
+                                    >
                                     Remove
                                 </button>
+                                    </div>
                             </div>
                         ))
 
