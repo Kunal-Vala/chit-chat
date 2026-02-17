@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react'
 import { useAuth } from '../context/AuthContext'
 import { connectChatSocket, disconnectChatSocket } from '../socket/chatSocket'
 import { deleteMessage, getMessages, getUserConversations, markConversationAsRead } from '../api/chatApi'
@@ -41,6 +42,7 @@ function Chat() {
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [messageInput, setMessageInput] = useState('')
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [typingUsers, setTypingUsers] = useState<Array<{ userId: string; username: string }>>([])
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set())
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
@@ -246,6 +248,7 @@ function Chat() {
       messageType: 'text',
     })
     setMessageInput('')
+    setShowEmojiPicker(false)
   }
 
   const handleMessageInputChange = (value: string) => {
@@ -264,6 +267,11 @@ function Chat() {
     if (event.shiftKey) return
     event.preventDefault()
     handleSendMessage()
+  }
+
+  const handleEmojiSelect = (emojiData: EmojiClickData) => {
+    setMessageInput((prev) => `${prev}${emojiData.emoji}`)
+    messageInputRef.current?.focus()
   }
 
   const handleDeleteMessage = async (messageId: string) => {
@@ -465,7 +473,33 @@ function Chat() {
             </div>
 
             <div className="border-t border-slate-200/70 px-5 py-4 shrink-0">
-              <div className="flex items-end gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              <div className="relative flex items-end gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setShowEmojiPicker((prev) => !prev)}
+                  className="p-2 text-slate-500 hover:text-slate-900"
+                  title="Add emoji"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M8 10h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M16 10h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M8 14c1.333 1.333 2.667 2 4 2s2.667-.667 4-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </button>
+                {showEmojiPicker && (
+                  <div className="absolute bottom-14 left-2 z-20">
+                    <EmojiPicker
+                      theme="light"
+                      onEmojiClick={handleEmojiSelect}
+                      searchPlaceHolder="Search"
+                      height={360}
+                      width={320}
+                      skinTonesDisabled
+                      previewConfig={{ showPreview: false }}
+                    />
+                  </div>
+                )}
                 <textarea
                   ref={messageInputRef}
                   rows={1}
