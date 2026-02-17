@@ -96,9 +96,22 @@ function Chat() {
     messageInputRef.current.style.overflowY = messageInputRef.current.scrollHeight > maxHeight ? 'auto' : 'hidden'
   }, [messageInput])
 
+  const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
+    window.requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior, block: 'end' })
+    })
+  }
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    scrollToBottom('smooth')
   }, [messages])
+
+  useEffect(() => {
+    if (!activeConversationId) return
+    if (loadingMessages) return
+    if (!isPageVisible) return
+    scrollToBottom('auto')
+  }, [activeConversationId, loadingMessages, isPageVisible])
 
   useEffect(() => {
     const loadConversations = async () => {
