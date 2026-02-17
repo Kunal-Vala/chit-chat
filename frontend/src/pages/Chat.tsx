@@ -293,16 +293,16 @@ function Chat() {
   }
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-amber-50 p-4 shadow-sm md:p-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <section className="lg:col-span-1 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
+    <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-amber-50 p-4 shadow-sm md:p-6 h-[calc(100vh-8rem)] overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-0">
+        <section className="lg:col-span-1 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur flex flex-col h-full min-h-0">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-slate-900">Conversations</h2>
             <span className="text-xs uppercase tracking-wide text-slate-400">Direct</span>
           </div>
         {loadingConversations && <div className="text-sm text-gray-500">Loading conversations...</div>}
         {error && <div className="text-sm text-red-600 mb-2">{error}</div>}
-        <div className="space-y-2">
+        <div className="space-y-2 flex-1 overflow-y-auto pr-1">
           {conversations.map((conv) => {
             const lastMessage = getLastMessageSummary(conv)
             const isActive = conv._id === activeConversationId
@@ -356,10 +356,10 @@ function Chat() {
         </div>
       </section>
 
-      <section className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white/90 shadow-sm backdrop-blur flex flex-col min-h-[640px]">
+      <section className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white/90 shadow-sm backdrop-blur flex flex-col h-full min-h-0">
         {activeConversation ? (
           <>
-            <header className="border-b border-slate-200/70 px-5 py-4 flex items-center gap-3">
+            <header className="border-b border-slate-200/70 px-5 py-4 flex items-center gap-3 shrink-0">
               {getParticipantAvatar(activeConversation, user?.userId) ? (
                 <img
                   src={getParticipantAvatar(activeConversation, user?.userId) as string}
@@ -383,7 +383,7 @@ function Chat() {
               </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto space-y-4 px-5 py-4">
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-4 px-5 py-4">
               {loadingMessages ? (
                 <div className="text-sm text-slate-500">Loading messages...</div>
               ) : (
@@ -457,7 +457,7 @@ function Chat() {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="border-t border-slate-200/70 px-5 py-4">
+            <div className="border-t border-slate-200/70 px-5 py-4 shrink-0">
               <div className="flex items-end gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
                 <textarea
                   ref={messageInputRef}
