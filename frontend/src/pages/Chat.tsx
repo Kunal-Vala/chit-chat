@@ -259,6 +259,13 @@ function Chat() {
     }, 1200)
   }
 
+  const handleMessageKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== 'Enter') return
+    if (event.shiftKey) return
+    event.preventDefault()
+    handleSendMessage()
+  }
+
   const handleDeleteMessage = async (messageId: string) => {
     try {
       await deleteMessage(messageId)
@@ -464,6 +471,7 @@ function Chat() {
                   rows={1}
                   value={messageInput}
                   onChange={(e) => handleMessageInputChange(e.target.value)}
+                  onKeyDown={handleMessageKeyDown}
                   placeholder="Type a message..."
                   className="flex-1 resize-none bg-transparent px-2 py-2 text-sm leading-relaxed text-slate-800 focus:outline-none"
                 />
