@@ -50,6 +50,7 @@ function Chat() {
   const userIdRef = useRef<string | null>(user?.userId ?? null)
   const typingTimeout = useRef<number | null>(null)
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const [isPageVisible, setIsPageVisible] = useState(true)
 
   useEffect(() => {
@@ -77,6 +78,10 @@ function Chat() {
     messageInputRef.current.style.height = `${nextHeight}px`
     messageInputRef.current.style.overflowY = messageInputRef.current.scrollHeight > maxHeight ? 'auto' : 'hidden'
   }, [messageInput])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   useEffect(() => {
     const loadConversations = async () => {
@@ -449,6 +454,7 @@ function Chat() {
                   )
                 })
               )}
+              <div ref={messagesEndRef} />
             </div>
 
             <div className="border-t border-slate-200/70 px-5 py-4">
