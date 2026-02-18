@@ -27,7 +27,7 @@ const io = new Server(httpServer, {
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 
 // Routes
