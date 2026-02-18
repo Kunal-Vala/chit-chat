@@ -3,6 +3,7 @@ import { connectDB } from './src/config/db';
 import { router as AuthRouter } from './src/routes/auth.route';
 import { router as ChatRouter } from './src/routes/chat.route';
 import { router as UserRouter } from './src/routes/user.route';
+import { router as GroupRouter } from './src/routes/group.route';
 import cors from "cors";
 import { FRONTEND } from './src/config/env';
 import { createServer } from 'http';
@@ -33,6 +34,7 @@ app.use(express.json());
 app.use('/api/chat', ChatRouter);
 app.use('/api/auth', AuthRouter);
 app.use('/api/user', UserRouter);
+app.use('/api/groups', GroupRouter);
 
 // Socket.io Connection Handling
 setupChatHandlers(io);
