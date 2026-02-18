@@ -42,6 +42,7 @@ export const setupChatHandlers = (io: Server) => {
 
     io.on('connection', (socket: Socket) => {
         const userId = socket.data.userId;
+        const username = socket.data.username;
 
         // store online user
 
@@ -58,14 +59,20 @@ export const setupChatHandlers = (io: Server) => {
 
         socket.broadcast.emit('user-online', { userId });
 
-        console.log(`User ${socket.data.username} connected`);
+        console.log(`User ${username} connected`);
 
 
         // Join Conversation Room
 
         socket.on('join-conversation', async (conversationId: string) => {
             await socket.join(conversationId);
-            console.log(`User ${userId} joined conversation ${conversationId}`);
+            console.log(`User ${username} (ID: ${userId}) joined conversation ${conversationId}`);
+        });
+
+        // Leave conversation room
+        socket.on('leave-conversation', async (conversationId: string) => {
+            await socket.leave(conversationId);
+            console.log(`User ${username} (ID: ${userId}) left conversation ${conversationId}`);
         });
 
         // send message
@@ -188,14 +195,19 @@ export const setupChatHandlers = (io: Server) => {
 
         // Typing indicators
         socket.on('typing-start', (conversationId: string) => {
+            console.log(`[TYPING] User ${username} (ID: ${userId}) started typing in conversation ${conversationId}`);
             socket.to(conversationId).emit('user-typing', {
                 userId,
-                username: socket.data.username
+                username,
+                conversationId
             });
         });
 
         socket.on('typing-stop', (conversationId: string) => {
-            socket.to(conversationId).emit('user-stopped-typing', { userId });
+            socket.to(conversationId).emit('user-stopped-typing', { 
+                userId,
+                conversationId
+            });
         });
 
         // Handle disconnection
@@ -211,7 +223,7 @@ export const setupChatHandlers = (io: Server) => {
             // Broadcast offline status
             socket.broadcast.emit('user-offline', { userId });
 
-            console.log(`User ${socket.data.username} disconnected`);
+            console.log(`User ${username} disconnected`);
         });
     });
 };
