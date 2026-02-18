@@ -25,11 +25,33 @@ export interface MessageSummary {
     senderId: string
 }
 
+export interface GroupMember {
+    userId: string
+    role: 'admin' | 'member'
+    joinedAt?: Date
+}
+
 export interface Conversation {
     _id: string
     participants: UserProfile[]
     conversationType: 'direct' | 'group'
+    groupName?: string
+    groupAvatarUrl?: string
+    groupDescription?: string
+    groupMembers?: GroupMember[]
     lastMessageId?: MessageSummary | string
+    createdAt?: string
+    updatedAt?: string
+}
+
+export interface Group {
+    _id: string
+    name: string
+    description?: string
+    adminId: UserProfile | string
+    memberIds: UserProfile[] | string[]
+    groupPictureUrl?: string
+    conversationId: string
     createdAt?: string
     updatedAt?: string
 }
