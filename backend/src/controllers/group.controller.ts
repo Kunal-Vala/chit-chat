@@ -96,6 +96,35 @@ export const getGroupDetails = async (req: AuthenticatedRequest, res: Response) 
     }
 };
 
+// GET /api/groups/conversation/:conversationId - Get group by conversation ID
+export const getGroupByConversationId = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+        const { conversationId } = req.params;
+
+        const group = await Group.findOne({ conversationId });
+
+        if (!group) {
+            return res.status(404).json({ error: 'Group not found' });
+        }
+
+        // Check if user is a member
+        const isMember = group.memberIds.some(memberId => memberId.toString() === userId);
+        if (!isMember) {
+            return res.status(403).json({ error: 'You are not a member of this group' });
+        }
+
+        // Populate after checking membership
+        await group.populate('adminId', 'username profilePictureUrl onlineStatus');
+        await group.populate('memberIds', 'username profilePictureUrl onlineStatus');
+
+        return res.json({ group });
+    } catch (error) {
+        console.error('Error fetching group by conversation ID:', error);
+        return res.status(500).json({ error: 'Failed to fetch group details' });
+    }
+};
+
 // PUT /api/groups/:groupId - Update group (name, description, picture)
 export const updateGroup = async (req: AuthenticatedRequest, res: Response) => {
     try {

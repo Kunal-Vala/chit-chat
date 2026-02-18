@@ -3,6 +3,7 @@ import { authenticateUser } from '../middleware/auth.middleware';
 import {
     createGroup,
     getGroupDetails,
+    getGroupByConversationId,
     updateGroup,
     deleteGroup,
     addMembers,
@@ -19,6 +20,7 @@ router.use(authenticateUser);
 
 // Group management routes
 router.post('/', createGroup);
+router.get('/conversation/:conversationId', getGroupByConversationId);
 router.get('/:groupId', getGroupDetails);
 router.put('/:groupId', updateGroup);
 router.delete('/:groupId', deleteGroup);
