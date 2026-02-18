@@ -66,6 +66,7 @@ function Chat() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const conversationIdFromUrl = searchParams.get('conversationId')
+  const conversationQuery = (searchParams.get('q') ?? '').trim().toLowerCase()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConversationId, setActiveConversationId] = useState<string | null>(conversationIdFromUrl)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -330,6 +331,15 @@ function Chat() {
     [conversations, activeConversationId]
   )
 
+  const filteredConversations = useMemo(() => {
+    if (!conversationQuery) return conversations
+    return conversations.filter((conv) => {
+      const label = getParticipantLabel(conv, user?.userId).toLowerCase()
+      const lastMessage = getLastMessageSummary(conv)?.content?.toLowerCase() ?? ''
+      return label.includes(conversationQuery) || lastMessage.includes(conversationQuery)
+    })
+  }, [conversations, conversationQuery, user?.userId])
+
   const firstUnreadMessageId = useMemo(() => {
     const currentUserId = user?.userId
     if (!currentUserId) return null
@@ -408,23 +418,26 @@ function Chat() {
   }
 
   return (
-    <div className="h-[calc(100vh-64px)] w-full overflow-hidden bg-gray-100">
-      <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-0 h-full min-h-0">
-        <section className={`border-r border-slate-200 bg-white p-4 flex flex-col h-full min-h-0 ${showMessagesInMobile ? 'hidden lg:flex' : 'flex'}`}>
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
-            <h2 className="text-base font-semibold text-slate-900">Messages</h2>
+    <div className="h-[calc(100vh-64px)] w-full overflow-hidden app-chat-shell p-3 lg:p-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4 h-full min-h-0">
+        <section className={`app-panel p-4 flex flex-col h-full min-h-0 ${showMessagesInMobile ? 'hidden lg:flex' : 'flex'}`}>
+          <div className="flex items-center justify-between mb-4 pb-3 border-b app-border">
+            <div>
+              <h2 className="text-base font-semibold">Messages</h2>
+              <p className="text-xs app-muted">Keep the flow going</p>
+            </div>
             <button
               onClick={() => setShowCreateGroup(true)}
-              className="rounded-lg bg-blue-600 p-2 text-white hover:bg-blue-700 transition"
+              className="app-icon-button app-icon-accent"
               title="Create Group"
             >
               <Users className="h-4 w-4" />
             </button>
           </div>
-        {loadingConversations && <div className="text-sm text-slate-500">Loading conversations...</div>}
+        {loadingConversations && <div className="text-sm app-muted">Loading conversations...</div>}
         {error && <div className="text-sm text-red-600 mb-2">{error}</div>}
-        <div className="space-y-1 flex-1 overflow-y-auto pr-1">
-          {conversations.map((conv) => {
+        <div className="space-y-2 flex-1 overflow-y-auto pr-1">
+          {filteredConversations.map((conv) => {
             const lastMessage = getLastMessageSummary(conv)
             const isActive = conv._id === activeConversationId
             return (
@@ -438,14 +451,14 @@ function Chat() {
                   [conv._id]: 0,
                 }))
               }}
-              className={`w-full text-left p-3 rounded-xl transition ${isActive ? 'bg-blue-50 shadow-sm' : 'hover:bg-slate-50'}`}
+              className={`w-full text-left p-3 rounded-xl transition border ${isActive ? 'border-transparent shadow-sm' : 'border-transparent hover:border-[color:var(--app-border)]'} ${isActive ? 'bg-[color:var(--app-surface-elev)]' : 'hover:bg-[color:var(--app-surface-elev)]'}`}
             >
                 <div className="flex items-center gap-3 min-w-0">
                   {getParticipantAvatar(conv, user?.userId) ? (
                     <img
                       src={getParticipantAvatar(conv, user?.userId) as string}
                       alt={getParticipantLabel(conv, user?.userId)}
-                      className="w-11 h-11 rounded-full object-cover ring-2 ring-white shadow-sm"
+                      className="app-avatar-img"
                     />
                   ) : (
                     <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-sm font-semibold text-white shadow-sm">
@@ -454,17 +467,17 @@ function Chat() {
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <span className="font-semibold text-[15px] text-slate-900">{getParticipantLabel(conv, user?.userId)}</span>
+                      <span className="font-semibold text-[15px]">{getParticipantLabel(conv, user?.userId)}</span>
                       <div className="flex items-center gap-2">
                         {unreadCounts[conv._id] > 0 && (
-                          <span className="bg-blue-600 text-white text-[11px] font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">
+                          <span className="app-pill min-w-[20px] h-5 px-1.5 justify-center">
                             {unreadCounts[conv._id] > 99 ? '99+' : unreadCounts[conv._id]}
                           </span>
                         )}
-                        <span className="text-[11px] text-slate-400">{formatTime(lastMessage?.sentAt)}</span>
+                        <span className="text-[11px] app-muted">{formatTime(lastMessage?.sentAt)}</span>
                       </div>
                     </div>
-                    <p className="text-[13px] text-slate-500 truncate">
+                    <p className="text-[13px] app-muted truncate">
                       {lastMessage ? lastMessage.content : 'No messages yet'}
                     </p>
                   </div>
@@ -472,19 +485,23 @@ function Chat() {
               </button>
             )
           })}
-          {!loadingConversations && conversations.length === 0 && (
-            <div className="text-sm text-slate-500">No conversations yet. Start a chat from the friends list.</div>
+          {!loadingConversations && filteredConversations.length === 0 && (
+            conversationQuery ? (
+              <div className="text-sm app-muted">No matches for “{conversationQuery}”.</div>
+            ) : (
+            <div className="text-sm app-muted">No conversations yet. Start a chat from the friends list.</div>
+            )
           )}
         </div>
       </section>
 
-      <section className={`bg-slate-50 flex flex-col h-full min-h-0 ${showMessagesInMobile ? 'flex' : 'hidden lg:flex'}`}>
+      <section className={`app-panel flex flex-col h-full min-h-0 ${showMessagesInMobile ? 'flex' : 'hidden lg:flex'}`}>
         {activeConversation ? (
           <>
-            <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center gap-3 shrink-0 shadow-sm">
+            <header className="app-panel-header px-6 py-4 flex items-center gap-3 shrink-0">
               <button
                 onClick={() => setShowMessagesInMobile(false)}
-                className="lg:hidden p-2 -ml-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition"
+                className="lg:hidden p-2 -ml-2 app-muted hover:text-[color:var(--app-text)] hover:bg-[color:var(--app-surface-elev)] rounded-lg transition"
                 title="Back to conversations"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -507,7 +524,7 @@ function Chat() {
                   <img
                     src={getParticipantAvatar(activeConversation, user?.userId) as string}
                     alt={getParticipantLabel(activeConversation, user?.userId)}
-                    className="w-11 h-11 rounded-full object-cover ring-2 ring-white shadow"
+                    className="app-avatar-img"
                   />
                 ) : (
                   <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-lg font-semibold text-white shadow">
@@ -515,9 +532,9 @@ function Chat() {
                   </div>
                 )}
                 <div className="flex-1 text-left">
-                  <h3 className="text-base font-semibold text-slate-900">{getParticipantLabel(activeConversation, user?.userId)}</h3>
+                  <h3 className="text-base font-semibold">{getParticipantLabel(activeConversation, user?.userId)}</h3>
                   {activeConversation.conversationType === 'group' ? (
-                    <p className="text-xs text-slate-500">{activeConversation.participants.length} members</p>
+                    <p className="text-xs app-muted">{activeConversation.participants.length} members</p>
                   ) : typingUsers.length > 0 ? (
                     <p className="text-xs text-blue-500">typing...</p>
                   ) : null}
@@ -527,7 +544,7 @@ function Chat() {
                 {activeConversation.conversationType === 'group' && (
                   <button
                     onClick={() => setShowGroupInfo(true)}
-                    className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 transition"
+                    className="app-icon-button"
                     title="Group Info"
                   >
                     <Info className="h-5 w-5" />
@@ -535,7 +552,7 @@ function Chat() {
                 )}
                 {activeConversation.conversationType === 'direct' && (
                   <div className="hidden md:flex items-center gap-2 text-xs">
-                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 font-medium">Online</span>
+                    <span className="app-pill">Online</span>
                   </div>
                 )}
               </div>
@@ -543,12 +560,12 @@ function Chat() {
 
             <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
               {groupNotification && (
-                <div className="mb-4 rounded-lg bg-blue-50 border border-blue-200 p-3 text-center text-sm text-blue-700">
+                <div className="mb-4 rounded-lg border app-border p-3 text-center text-sm">
                   {groupNotification}
                 </div>
               )}
               {loadingMessages ? (
-                <div className="text-sm text-slate-500">Loading messages...</div>
+                <div className="text-sm app-muted">Loading messages...</div>
               ) : (
                 messages.map((msg, index) => {
                   const isOwn = getSenderId(msg.senderId) === user?.userId
@@ -563,31 +580,31 @@ function Chat() {
                     <div key={msg._id} className="mb-4">
                       {showDateDivider && (
                         <div className="flex items-center justify-center my-6">
-                          <span className="px-4 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-full shadow-sm">
+                          <span className="px-4 py-1.5 text-xs font-medium app-card-inner">
                             {formatDateLabel(msg.sentAt)}
                           </span>
                         </div>
                       )}
                       {showUnreadDivider && (
-                        <div className="flex items-center gap-3 text-xs text-red-600 my-6">
+                        <div className="flex items-center gap-3 text-xs my-6">
                           <span className="flex-1 h-px bg-red-300" />
-                          <span className="px-3 py-1 bg-red-50 border border-red-200 rounded-full font-medium">Unread messages</span>
+                          <span className="app-pill">Unread messages</span>
                           <span className="flex-1 h-px bg-red-300" />
                         </div>
                       )}
                       <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                         <div
-                          className={`group max-w-[600px] rounded-2xl px-4 py-2.5 break-words whitespace-pre-wrap ${isOwn ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-900 border border-slate-200 shadow-sm'} ${isCopied ? (isOwn ? 'ring-2 ring-blue-300' : 'ring-2 ring-blue-400') : ''}`}
+                          className={`group max-w-[600px] break-words whitespace-pre-wrap app-bubble ${isOwn ? 'app-bubble-own' : 'app-bubble-other'} ${isCopied ? 'ring-2 ring-[color:var(--app-ring)]' : ''}`}
                         >
                           {!isOwn && activeConversation?.conversationType === 'group' && typeof msg.senderId !== 'string' && (
-                            <p className="text-xs font-semibold mb-1 text-blue-600">{msg.senderId.username}</p>
+                            <p className="text-xs font-semibold mb-1" style={{ color: 'var(--app-accent-2)' }}>{msg.senderId.username}</p>
                           )}
                           <p className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">{displayContent}</p>
                           {isLong && (
                             <button
                               type="button"
                               onClick={() => toggleMessageExpanded(msg._id)}
-                              className={`mt-1.5 text-xs font-medium ${isOwn ? 'text-blue-100 hover:text-white' : 'text-blue-600 hover:text-blue-700'} hover:underline`}
+                              className={`mt-1.5 text-xs font-medium ${isOwn ? 'text-white/80 hover:text-white' : 'text-[color:var(--app-accent-2)] hover:text-[color:var(--app-accent)]'} hover:underline`}
                             >
                               {isExpanded ? 'Show less' : 'Read more'}
                             </button>
@@ -601,14 +618,14 @@ function Chat() {
                           </div>
                           <div className="mt-1 flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             {isCopied && (
-                              <span className={`text-xs ${isOwn ? 'text-blue-100' : 'text-blue-600'}`}>
+                              <span className={`text-xs ${isOwn ? 'text-white/80' : 'text-[color:var(--app-accent-2)]'}`}>
                                 Copied!
                               </span>
                             )}
                             <button
                               type="button"
                               onClick={() => handleCopyMessage(msg._id, msg.content)}
-                              className={`flex items-center gap-1 text-xs ${isOwn ? 'text-blue-100 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
+                              className={`flex items-center gap-1 text-xs ${isOwn ? 'text-white/80 hover:text-white' : 'app-muted hover:text-[color:var(--app-text)]'}`}
                               title="Copy message"
                             >
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -642,12 +659,12 @@ function Chat() {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="bg-white border-t border-slate-200 px-6 py-4 shrink-0">
-              <div className="relative flex items-end gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition">
+            <div className="px-6 py-4 shrink-0">
+              <div className="relative flex items-end gap-3 rounded-2xl border app-border app-card-inner px-4 py-3 focus-within:ring-2 focus-within:ring-[color:var(--app-ring)] transition">
                 <button
                   type="button"
                   onClick={() => setShowEmojiPicker((prev) => !prev)}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
+                  className="app-icon-button"
                   title="Add emoji"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -676,12 +693,12 @@ function Chat() {
                   onChange={(e) => handleMessageInputChange(e.target.value)}
                   onKeyDown={handleMessageKeyDown}
                   placeholder="Type a message..."
-                  className="flex-1 resize-none bg-transparent px-2 py-1 text-[15px] leading-relaxed text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                  className="flex-1 resize-none bg-transparent px-2 py-1 text-[15px] leading-relaxed text-[color:var(--app-text)] placeholder:text-[color:var(--app-muted)] focus:outline-none"
                 />
                 <button
                   onClick={handleSendMessage}
                   disabled={!messageInput.trim()}
-                  className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  className="app-primary-button px-5 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Send
                 </button>
@@ -697,8 +714,8 @@ function Chat() {
                 </svg>
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">No conversation selected</h3>
-                <p className="text-sm text-slate-500">
+                <h3 className="text-xl font-semibold mb-2">No conversation selected</h3>
+                <p className="text-sm app-muted">
                   Choose a conversation from the list to start chatting, or go to the friends list to start a new conversation.
                 </p>
               </div>

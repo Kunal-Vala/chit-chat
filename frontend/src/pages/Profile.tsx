@@ -115,118 +115,124 @@ function Profile() {
     }
   }
 
-  if (loading) return <div className="text-center py-8">Loading...</div>
-  if (!profile) return <div className="text-center py-8">User not found</div>
+  if (loading) return <div className="text-center py-8 app-muted">Loading...</div>
+  if (!profile) return <div className="text-center py-8 app-muted">User not found</div>
 
   const isOwnProfile = currentUser?.userId === userId
   const canEdit = isOwnProfile
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{error}</div>}
-      
-      {/* Profile Picture */}
-      <div className="flex justify-center mb-6">
-        <div className="relative">
-          {profile.profilePictureUrl ? (
-            <img src={profile.profilePictureUrl} alt={profile.username} className="w-32 h-32 rounded-full object-cover" />
-          ) : (
-            <div className="w-32 h-32 rounded-full bg-gray-300 flex items-center justify-center">
-              <span className="text-4xl text-gray-600">{profile.username[0]?.toUpperCase()}</span>
-            </div>
-          )}
-          {canEdit && (
-            <>
-              <label className="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-2 cursor-pointer hover:bg-blue-700">
-                <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                </svg>
-              </label>
-              {profile.profilePictureUrl && (
-                <button
-                  onClick={handleDeleteProfilePicture}
-                  className="absolute bottom-0 left-0 bg-red-600 text-white rounded-full p-2 cursor-pointer hover:bg-red-700"
-                  title="Delete profile picture"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                </button>
+    <div className="app-page">
+      <div className="app-card p-6 md:p-8">
+        {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{error}</div>}
+        
+        <div className="flex flex-col md:flex-row md:items-start gap-8">
+          <div className="flex flex-col items-center md:items-start">
+            <div className="relative">
+              {profile.profilePictureUrl ? (
+                <img src={profile.profilePictureUrl} alt={profile.username} className="app-avatar-img xl" />
+              ) : (
+                <div className="app-avatar-img xl flex items-center justify-center">
+                  <span className="text-4xl text-[color:var(--app-muted)]">{profile.username[0]?.toUpperCase()}</span>
+                </div>
               )}
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Profile Info */}
-      <div className="text-center mb-6">
-        {isEditing && canEdit ? (
-          <div className="space-y-4">
-            <input
-              type="text"
-              value={editData.username}
-              onChange={e => setEditData({ ...editData, username: e.target.value })}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md text-center"
-              placeholder="Username"
-            />
-            <textarea
-              value={editData.statusText}
-              onChange={e => setEditData({ ...editData, statusText: e.target.value })}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md text-center"
-              placeholder="Status"
-              rows={3}
-            />
-            <div className="flex gap-2 justify-center">
-              <button onClick={handleUpdateProfile} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                Save
-              </button>
-              <button onClick={() => setIsEditing(false)} className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
-                Cancel
-              </button>
+              {canEdit && (
+                <>
+                  <label className="absolute -bottom-2 -right-2 app-icon-button app-icon-accent cursor-pointer">
+                    <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                    </svg>
+                  </label>
+                  {profile.profilePictureUrl && (
+                    <button
+                      onClick={handleDeleteProfilePicture}
+                      className="absolute -bottom-2 -left-2 app-icon-button"
+                      title="Delete profile picture"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="mt-4 text-sm app-muted">
+              {profile.onlineStatus ? <span>Online</span> : <span>Offline</span>}
             </div>
           </div>
-        ) : (
-          <>
-            <h1 className="text-3xl font-bold mb-2">{profile.username}</h1>
-            <p className="text-gray-600 mb-2">{profile.email}</p>
-            {profile.statusText && <p className="text-gray-500 italic mb-4">{profile.statusText}</p>}
-            {canEdit && <button onClick={() => setIsEditing(true)} className="text-blue-600 hover:underline">
-              Edit Profile
-            </button>}
-          </>
-        )}
-      </div>
 
-      {/* Online Status */}
-      <div className="text-center mb-6 text-sm text-gray-500">
-        {profile.onlineStatus ? <span className="text-green-600">🟢 Online</span> : <span>⚪ Offline</span>}
-      </div>
+          <div className="flex-1">
+            {isEditing && canEdit ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="app-label">Username</label>
+                  <input
+                    type="text"
+                    value={editData.username}
+                    onChange={e => setEditData({ ...editData, username: e.target.value })}
+                    className="app-input"
+                    placeholder="Username"
+                  />
+                </div>
+                <div>
+                  <label className="app-label">Status</label>
+                  <textarea
+                    value={editData.statusText}
+                    onChange={e => setEditData({ ...editData, statusText: e.target.value })}
+                    className="app-textarea"
+                    placeholder="Status"
+                    rows={3}
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={handleUpdateProfile} className="app-primary-button">
+                    Save
+                  </button>
+                  <button onClick={() => setIsEditing(false)} className="app-secondary-button">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <h1 className="text-3xl font-bold mb-2 font-display">{profile.username}</h1>
+                <p className="app-muted mb-1">{profile.email}</p>
+                {profile.statusText && <p className="app-muted italic mb-4">{profile.statusText}</p>}
+                {canEdit && (
+                  <button onClick={() => setIsEditing(true)} className="app-secondary-button">
+                    Edit Profile
+                  </button>
+                )}
+              </>
+            )}
 
-      {/* Friend Actions */}
-      {!isOwnProfile && (
-        <div className="flex gap-4 justify-center">
-          {isFriend ? (
-            <button onClick={handleDeleteFriend} className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700">
-              Remove Friend
-            </button>
-          ) : friendRequestSent ? (
-            <button disabled className="bg-gray-400 text-white px-6 py-2 rounded">
-              Friend Request Sent
-            </button>
-          ) : (
-            <button onClick={handleSendFriendRequest} className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
-              Add Friend
-            </button>
-          )}
+            {!isOwnProfile && (
+              <div className="mt-6 flex gap-3">
+                {isFriend ? (
+                  <button onClick={handleDeleteFriend} className="app-secondary-button">
+                    Remove Friend
+                  </button>
+                ) : friendRequestSent ? (
+                  <button disabled className="app-secondary-button opacity-60">
+                    Friend Request Sent
+                  </button>
+                ) : (
+                  <button onClick={handleSendFriendRequest} className="app-primary-button">
+                    Add Friend
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      )}
 
-      {/* Back Button */}
-      <div className="mt-8 text-center">
-        <button onClick={() => navigate(-1)} className="text-blue-600 hover:underline">
-          ← Back
-        </button>
+        <div className="mt-8">
+          <button onClick={() => navigate(-1)} className="app-link">
+            Back
+          </button>
+        </div>
       </div>
     </div>
   )

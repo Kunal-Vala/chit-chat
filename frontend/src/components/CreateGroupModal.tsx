@@ -90,52 +90,50 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-2xl rounded-lg bg-white shadow-xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-2xl app-card">
+        <div className="flex items-center justify-between app-panel-header p-4">
           <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-blue-600" />
+            <Users className="h-5 w-5" />
             <h2 className="text-xl font-semibold">Create New Group</h2>
           </div>
           <button
             onClick={handleClose}
             disabled={loading}
-            className="rounded-full p-1 hover:bg-gray-100 disabled:opacity-50"
+            className="app-icon-button"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-4">
           {error && (
-            <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+            <div className="mb-4 rounded-lg bg-red-100 p-3 text-sm text-red-700">
               {error}
             </div>
           )}
 
           {/* Group Picture */}
           <div className="mb-4">
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="app-label">
               Group Picture URL (optional)
             </label>
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Upload className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                <Upload className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 app-muted" />
                 <input
                   type="url"
                   value={groupPictureUrl}
                   onChange={(e) => setGroupPictureUrl(e.target.value)}
                   placeholder="https://example.com/image.jpg"
-                  className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-3 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="app-input pl-10"
                 />
               </div>
               {groupPictureUrl && (
                 <img
                   src={groupPictureUrl}
                   alt="Preview"
-                  className="h-10 w-10 rounded-lg object-cover"
+                  className="app-avatar-img"
                   onError={() => setGroupPictureUrl('')}
                 />
               )}
@@ -144,7 +142,7 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
 
           {/* Group Name */}
           <div className="mb-4">
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="app-label">
               Group Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -154,14 +152,14 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
               placeholder="Enter group name"
               maxLength={100}
               required
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="app-input"
             />
-            <p className="mt-1 text-xs text-gray-500">{groupName.length}/100</p>
+            <p className="mt-1 text-xs app-muted">{groupName.length}/100</p>
           </div>
 
           {/* Description */}
           <div className="mb-4">
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="app-label">
               Description (optional)
             </label>
             <textarea
@@ -170,39 +168,39 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
               placeholder="What's this group about?"
               maxLength={500}
               rows={3}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="app-textarea"
             />
-            <p className="mt-1 text-xs text-gray-500">{description.length}/500</p>
+            <p className="mt-1 text-xs app-muted">{description.length}/500</p>
           </div>
 
           {/* Select Members */}
           <div className="mb-4">
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="app-label">
               Add Members (optional)
             </label>
             {loadingFriends ? (
-              <div className="py-8 text-center text-sm text-gray-500">Loading friends...</div>
+              <div className="py-8 text-center text-sm app-muted">Loading friends...</div>
             ) : friends.length === 0 ? (
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-center text-sm text-gray-500">
+              <div className="rounded-lg border app-border p-4 text-center text-sm app-muted">
                 No friends available to add
               </div>
             ) : (
-              <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-3">
+              <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border app-border p-3">
                 {friends.map((friend) => (
                   <label
                     key={friend._id}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-gray-50"
+                    className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-[color:var(--app-surface-elev)]"
                   >
                     <input
                       type="checkbox"
                       checked={selectedMembers.includes(friend._id)}
                       onChange={() => handleMemberToggle(friend._id)}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="h-4 w-4 rounded"
                     />
                     <img
                       src={friend.profilePictureUrl || '/default-avatar.png'}
                       alt={friend.username}
-                      className="h-8 w-8 rounded-full object-cover"
+                      className="app-avatar-img"
                     />
                     <span className="text-sm font-medium">{friend.username}</span>
                   </label>
@@ -210,7 +208,7 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
               </div>
             )}
             {selectedMembers.length > 0 && (
-              <p className="mt-2 text-sm text-gray-600">
+              <p className="mt-2 text-sm app-muted">
                 {selectedMembers.length} member{selectedMembers.length !== 1 ? 's' : ''} selected
               </p>
             )}
@@ -222,14 +220,14 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
               type="button"
               onClick={handleClose}
               disabled={loading}
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              className="flex-1 app-secondary-button disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !groupName.trim()}
-              className="flex-1 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              className="flex-1 app-primary-button disabled:opacity-50"
             >
               {loading ? 'Creating...' : 'Create Group'}
             </button>

@@ -51,13 +51,14 @@ export default function Sign_In() {
     }
 
     return (
-        <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold text-center mb-6">Sign In</h2>
-            {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
+        <div className="max-w-md mx-auto mt-8 p-6 app-card">
+            <h2 className="text-2xl font-bold text-center mb-2 font-display">Sign In</h2>
+            <p className="text-center text-sm app-muted mb-6">Welcome back. Pick up the conversation.</p>
+            {error && <div className="border border-red-400 text-red-700 px-4 py-3 rounded mb-4 bg-red-100">{error}</div>}
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="email" className="app-label">
                         Email *
                     </label>
                     <input
@@ -68,12 +69,12 @@ export default function Sign_In() {
                         onChange={handleChange}
                         placeholder="Enter your email"
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="app-input"
                     />
                 </div>
 
                 <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="password" className="app-label">
                         Password *
                     </label>
                     <input
@@ -82,27 +83,27 @@ export default function Sign_In() {
                         name="password"
                         value={formData.password}
                         onChange={handleChange}
-                        placeholder="Enter Your password"
+                        placeholder="Enter your password"
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="app-input"
                     />
                 </div>
 
-                <div className="flex items-center">
+                <div className="flex items-center gap-2 text-sm app-muted">
                     <input
                         id="remember"
                         type="checkbox"
                         checked={remember}
                         onChange={(e) => setRemember(e.target.checked)}
-                        className="mr-2"
+                        className="h-4 w-4"
                     />
-                    <label htmlFor="remember" className="text-sm text-gray-700">Remember me</label>
+                    <label htmlFor="remember">Remember me</label>
                 </div>
 
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    className="w-full app-primary-button disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     {loading ? 'Signing In...' : 'Sign In'}
                 </button>

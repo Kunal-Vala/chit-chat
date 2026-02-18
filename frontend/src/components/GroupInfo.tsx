@@ -213,33 +213,31 @@ export function GroupInfo({ conversationId, currentUserId, isOpen, onClose, onGr
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-2xl rounded-lg bg-white shadow-xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-2xl app-card">
+        <div className="flex items-center justify-between app-panel-header p-4">
           <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-blue-600" />
+            <Users className="h-5 w-5" />
             <h2 className="text-xl font-semibold">Group Info</h2>
           </div>
           <button
             onClick={onClose}
             disabled={loading}
-            className="rounded-full p-1 hover:bg-gray-100 disabled:opacity-50"
+            className="app-icon-button"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Content */}
         <div className="max-h-[70vh] overflow-y-auto p-4">
           {error && (
-            <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+            <div className="mb-4 rounded-lg bg-red-100 p-3 text-sm text-red-700">
               {error}
             </div>
           )}
 
           {loading && !group ? (
-            <div className="py-8 text-center text-gray-500">Loading...</div>
+            <div className="py-8 text-center app-muted">Loading...</div>
           ) : group ? (
             <div className="space-y-6">
               {/* Group Details */}
@@ -251,15 +249,21 @@ export function GroupInfo({ conversationId, currentUserId, isOpen, onClose, onGr
                       value={groupPictureUrl}
                       onChange={(e) => setGroupPictureUrl(e.target.value)}
                       placeholder="Group picture URL"
-                      className="w-full rounded-lg border px-3 py-2 text-sm"
+                      className="app-input"
                     />
                   </div>
                 ) : (
-                  <img
-                    src={group.groupPictureUrl || '/default-group.png'}
-                    alt={group.name}
-                    className="mx-auto mb-4 h-24 w-24 rounded-full object-cover"
-                  />
+                  group.groupPictureUrl ? (
+                    <img
+                      src={group.groupPictureUrl}
+                      alt={group.name}
+                      className="app-avatar-img xl mx-auto mb-4"
+                    />
+                  ) : (
+                    <div className="app-avatar-img xl mx-auto mb-4 flex items-center justify-center">
+                      <span className="text-4xl font-semibold app-muted">{group.name.charAt(0).toUpperCase()}</span>
+                    </div>
+                  )
                 )}
 
                 {isEditing ? (
@@ -269,23 +273,23 @@ export function GroupInfo({ conversationId, currentUserId, isOpen, onClose, onGr
                       value={groupName}
                       onChange={(e) => setGroupName(e.target.value)}
                       placeholder="Group name"
-                      className="mb-2 w-full rounded-lg border px-3 py-2"
+                      className="app-input mb-2"
                     />
                     <textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder="Group description"
                       rows={2}
-                      className="w-full rounded-lg border px-3 py-2"
+                      className="app-textarea"
                     />
                   </>
                 ) : (
                   <>
                     <h3 className="text-2xl font-bold">{group.name}</h3>
                     {group.description && (
-                      <p className="mt-1 text-sm text-gray-500">{group.description}</p>
+                      <p className="mt-1 text-sm app-muted">{group.description}</p>
                     )}
-                    <p className="mt-2 text-sm text-gray-500">
+                    <p className="mt-2 text-sm app-muted">
                       {members.length} member{members.length !== 1 ? 's' : ''}
                     </p>
                   </>
@@ -304,14 +308,14 @@ export function GroupInfo({ conversationId, currentUserId, isOpen, onClose, onGr
                           setDescription(group.description || '')
                           setGroupPictureUrl(group.groupPictureUrl || '')
                         }}
-                        className="flex-1 rounded-lg border px-4 py-2 text-sm"
+                        className="flex-1 app-secondary-button"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={handleUpdateGroup}
                         disabled={loading}
-                        className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+                        className="flex-1 app-primary-button disabled:opacity-50"
                       >
                         Save Changes
                       </button>
@@ -320,7 +324,7 @@ export function GroupInfo({ conversationId, currentUserId, isOpen, onClose, onGr
                     <>
                       <button
                         onClick={() => setIsEditing(true)}
-                        className="flex w-full items-center gap-2 rounded-lg border px-4 py-2 text-sm hover:bg-gray-50"
+                        className="flex w-full items-center gap-2 app-secondary-button"
                       >
                         <Edit2 className="h-4 w-4" />
                         Edit Group
@@ -330,14 +334,14 @@ export function GroupInfo({ conversationId, currentUserId, isOpen, onClose, onGr
                           setShowAddMembers(true)
                           loadFriends()
                         }}
-                        className="flex w-full items-center gap-2 rounded-lg border px-4 py-2 text-sm hover:bg-gray-50"
+                        className="flex w-full items-center gap-2 app-secondary-button"
                       >
                         <UserPlus className="h-4 w-4" />
                         Add Members
                       </button>
                       <button
                         onClick={() => setShowTransferAdmin(true)}
-                        className="flex w-full items-center gap-2 rounded-lg border px-4 py-2 text-sm hover:bg-gray-50"
+                        className="flex w-full items-center gap-2 app-secondary-button"
                       >
                         <Crown className="h-4 w-4" />
                         Transfer Admin Rights
@@ -345,7 +349,7 @@ export function GroupInfo({ conversationId, currentUserId, isOpen, onClose, onGr
                       <button
                         onClick={handleDeleteGroup}
                         disabled={loading}
-                        className="flex w-full items-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+                        className="flex w-full items-center gap-2 app-danger-button disabled:opacity-50"
                       >
                         <Trash2 className="h-4 w-4" />
                         Delete Group
@@ -360,7 +364,7 @@ export function GroupInfo({ conversationId, currentUserId, isOpen, onClose, onGr
                 <button
                   onClick={handleLeaveGroup}
                   disabled={loading}
-                  className="flex w-full items-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  className="flex w-full items-center gap-2 app-danger-button disabled:opacity-50"
                 >
                   <LogOut className="h-4 w-4" />
                   Leave Group
@@ -376,22 +380,28 @@ export function GroupInfo({ conversationId, currentUserId, isOpen, onClose, onGr
                     const isGroupAdmin = (typeof group.adminId === 'string' ? group.adminId : group.adminId._id) === memberId
 
                     return (
-                      <div key={memberId} className="flex items-center justify-between rounded-lg border p-3">
+                      <div key={memberId} className="flex items-center justify-between app-card-inner p-3">
                         <div className="flex items-center gap-3">
                           <div className="relative">
-                            <img
-                              src={getMemberAvatar(member)}
-                              alt={getMemberUsername(member)}
-                              className="h-10 w-10 rounded-full object-cover"
-                            />
+                            {getMemberAvatar(member) ? (
+                              <img
+                                src={getMemberAvatar(member)}
+                                alt={getMemberUsername(member)}
+                                className="app-avatar-img"
+                              />
+                            ) : (
+                              <div className="app-avatar-img flex items-center justify-center">
+                                <span className="text-sm font-semibold app-muted">?</span>
+                              </div>
+                            )}
                             {getMemberStatus(member) && (
-                              <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-green-500" />
+                              <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[color:var(--app-surface)] bg-green-500" />
                             )}
                           </div>
                           <div>
                             <p className="font-medium">{getMemberUsername(member)}</p>
                             {isGroupAdmin && (
-                              <span className="flex items-center gap-1 text-xs text-blue-600">
+                              <span className="app-pill text-xs">
                                 <Shield className="h-3 w-3" />
                                 Admin
                               </span>
@@ -402,7 +412,7 @@ export function GroupInfo({ conversationId, currentUserId, isOpen, onClose, onGr
                           <button
                             onClick={() => handleRemoveMember(memberId)}
                             disabled={loading}
-                            className="rounded-lg p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                            className="app-danger-button"
                           >
                             <UserMinus className="h-4 w-4" />
                           </button>
@@ -415,15 +425,15 @@ export function GroupInfo({ conversationId, currentUserId, isOpen, onClose, onGr
 
               {/* Add Members Modal */}
               {showAddMembers && (
-                <div className="rounded-lg border bg-gray-50 p-4">
+                <div className="app-card-inner p-4">
                   <h4 className="mb-3 font-semibold">Select Friends to Add</h4>
                   {friends.length === 0 ? (
-                    <p className="text-sm text-gray-500">No available friends to add</p>
+                    <p className="text-sm app-muted">No available friends to add</p>
                   ) : (
                     <>
                       <div className="mb-3 max-h-48 space-y-2 overflow-y-auto">
                         {friends.map((friend) => (
-                          <label key={friend._id} className="flex cursor-pointer items-center gap-3 rounded p-2 hover:bg-white">
+                          <label key={friend._id} className="flex cursor-pointer items-center gap-3 rounded p-2 hover:bg-[color:var(--app-surface-elev)]">
                             <input
                               type="checkbox"
                               checked={selectedMembers.includes(friend._id)}
@@ -437,7 +447,7 @@ export function GroupInfo({ conversationId, currentUserId, isOpen, onClose, onGr
                             <img
                               src={friend.profilePictureUrl || '/default-avatar.png'}
                               alt={friend.username}
-                              className="h-8 w-8 rounded-full"
+                              className="app-avatar-img"
                             />
                             <span className="text-sm">{friend.username}</span>
                           </label>
@@ -449,14 +459,14 @@ export function GroupInfo({ conversationId, currentUserId, isOpen, onClose, onGr
                             setShowAddMembers(false)
                             setSelectedMembers([])
                           }}
-                          className="flex-1 rounded-lg border px-4 py-2 text-sm"
+                          className="flex-1 app-secondary-button"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={handleAddMembers}
                           disabled={loading || selectedMembers.length === 0}
-                          className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+                          className="flex-1 app-primary-button disabled:opacity-50"
                         >
                           Add Selected
                         </button>
@@ -468,7 +478,7 @@ export function GroupInfo({ conversationId, currentUserId, isOpen, onClose, onGr
 
               {/* Transfer Admin Modal */}
               {showTransferAdmin && (
-                <div className="rounded-lg border bg-gray-50 p-4">
+                <div className="app-card-inner p-4">
                   <h4 className="mb-3 font-semibold">Transfer Admin Rights</h4>
                   <div className="mb-3 space-y-2">
                     {members
@@ -479,7 +489,7 @@ export function GroupInfo({ conversationId, currentUserId, isOpen, onClose, onGr
                       .map((member) => {
                         const memberId = getMemberId(member)
                         return (
-                          <label key={memberId} className="flex cursor-pointer items-center gap-3 rounded p-2 hover:bg-white">
+                          <label key={memberId} className="flex cursor-pointer items-center gap-3 rounded p-2 hover:bg-[color:var(--app-surface-elev)]">
                             <input
                               type="radio"
                               name="newAdmin"
@@ -491,7 +501,7 @@ export function GroupInfo({ conversationId, currentUserId, isOpen, onClose, onGr
                             <img
                               src={getMemberAvatar(member)}
                               alt={getMemberUsername(member)}
-                              className="h-8 w-8 rounded-full"
+                              className="app-avatar-img"
                             />
                             <span className="text-sm">{getMemberUsername(member)}</span>
                           </label>
@@ -504,14 +514,14 @@ export function GroupInfo({ conversationId, currentUserId, isOpen, onClose, onGr
                         setShowTransferAdmin(false)
                         setSelectedNewAdmin('')
                       }}
-                      className="flex-1 rounded-lg border px-4 py-2 text-sm"
+                      className="flex-1 app-secondary-button"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleTransferAdmin}
                       disabled={loading || !selectedNewAdmin}
-                      className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+                      className="flex-1 app-primary-button disabled:opacity-50"
                     >
                       Transfer
                     </button>
