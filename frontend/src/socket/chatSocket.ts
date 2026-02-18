@@ -40,3 +40,46 @@ export const disconnectChatSocket = (): void => {
     socketInstance = null
   }
 }
+
+// Group-related socket functions
+
+export const joinGroup = (groupId: string): void => {
+  if (socketInstance) {
+    socketInstance.emit('join-group', groupId)
+  }
+}
+
+export const leaveGroupRoom = (groupId: string): void => {
+  if (socketInstance) {
+    socketInstance.emit('leave-group', groupId)
+  }
+}
+
+export const sendGroupMessage = (data: {
+  groupId: string
+  content: string
+  messageType: 'text' | 'image' | 'file'
+  mediaUrl?: string
+}): void => {
+  if (socketInstance) {
+    socketInstance.emit('group-message', data)
+  }
+}
+
+export const notifyMemberAdded = (groupId: string, memberIds: string[]): void => {
+  if (socketInstance) {
+    socketInstance.emit('member-added', { groupId, memberIds })
+  }
+}
+
+export const notifyMemberRemoved = (groupId: string, memberId: string): void => {
+  if (socketInstance) {
+    socketInstance.emit('member-removed', { groupId, memberId })
+  }
+}
+
+export const notifyGroupUpdated = (groupId: string, updates: { name?: string; description?: string; groupPictureUrl?: string }): void => {
+  if (socketInstance) {
+    socketInstance.emit('group-updated', { groupId, updates })
+  }
+}

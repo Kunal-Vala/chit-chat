@@ -167,3 +167,6 @@ export const checkFriendshipStatus = async (targetUserId: string) => {
     throw new Error(extractErrorMessage(error))
   }
 }
+
+// Alias for getFriendsList for convenience
+export const getFriends = getFriendsList

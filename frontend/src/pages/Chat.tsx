@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react'
+import { Users, Info } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { connectChatSocket, disconnectChatSocket } from '../socket/chatSocket'
 import { deleteMessage, getMessages, getUserConversations, markConversationAsRead } from '../api/chatApi'
+import { CreateGroupModal } from '../components/CreateGroupModal'
+import { GroupInfo } from '../components/GroupInfo'
 import type { ChatMessage, Conversation, MessageSummary } from '../types'
 
 const formatTime = (iso?: string) => {
@@ -30,12 +33,18 @@ const formatDateLabel = (iso?: string) => {
 const getSenderId = (senderId: ChatMessage['senderId']) => (typeof senderId === 'string' ? senderId : senderId._id)
 
 const getParticipantLabel = (conversation: Conversation, currentUserId?: string) => {
+  if (conversation.conversationType === 'group') {
+    return conversation.groupName || 'Group Chat'
+  }
   if (!currentUserId) return 'Conversation'
   const other = conversation.participants.find((p) => p._id !== currentUserId)
   return other?.username ?? 'Conversation'
 }
 
 const getParticipantAvatar = (conversation: Conversation, currentUserId?: string) => {
+  if (conversation.conversationType === 'group') {
+    return conversation.groupAvatarUrl || null
+  }
   if (!currentUserId) return null
   const other = conversation.participants.find((p) => p._id !== currentUserId)
   return other?.profilePictureUrl ?? null
@@ -70,6 +79,9 @@ function Chat() {
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({})
   const [showMessagesInMobile, setShowMessagesInMobile] = useState(false)
+  const [showCreateGroup, setShowCreateGroup] = useState(false)
+  const [showGroupInfo, setShowGroupInfo] = useState(false)
+  const [groupNotification, setGroupNotification] = useState<string | null>(null)
 
   const activeConversationRef = useRef<string | null>(null)
   const userIdRef = useRef<string | null>(user?.userId ?? null)
@@ -210,16 +222,54 @@ function Chat() {
       setTypingUsers((prev) => prev.filter((u) => u.userId !== data.userId))
     }
 
+    const handleNewGroupMessage = (data: { groupId: string; message: ChatMessage }) => {
+      handleNewMessage(data.message)
+    }
+
+    const handleMemberAdded = (data: { groupId: string; memberIds: string[] }) => {
+      setGroupNotification(`${data.memberIds.length} member(s) added to the group`)
+      setTimeout(() => setGroupNotification(null), 3000)
+    }
+
+    const handleMemberRemoved = () => {
+      setGroupNotification('A member was removed from the group')
+      setTimeout(() => setGroupNotification(null), 3000)
+    }
+
+    const handleRemovedFromGroup = () => {
+      setGroupNotification('You were removed from the group')
+      setTimeout(() => setGroupNotification(null), 3000)
+      // Reload conversations
+      void getUserConversations().then(setConversations)
+    }
+
+    const handleGroupUpdated = () => {
+      setGroupNotification('Group details updated')
+      setTimeout(() => setGroupNotification(null), 3000)
+      // Reload conversations
+      void getUserConversations().then(setConversations)
+    }
+
     socket.on('new-message', handleNewMessage)
+    socket.on('new-group-message', handleNewGroupMessage)
     socket.on('message-status-updated', handleStatusUpdated)
     socket.on('user-typing', handleTyping)
     socket.on('user-stopped-typing', handleStoppedTyping)
+    socket.on('member-added', handleMemberAdded)
+    socket.on('member-removed', handleMemberRemoved)
+    socket.on('removed-from-group', handleRemovedFromGroup)
+    socket.on('group-updated', handleGroupUpdated)
 
     return () => {
       socket.off('new-message', handleNewMessage)
+      socket.off('new-group-message', handleNewGroupMessage)
       socket.off('message-status-updated', handleStatusUpdated)
       socket.off('user-typing', handleTyping)
       socket.off('user-stopped-typing', handleStoppedTyping)
+      socket.off('member-added', handleMemberAdded)
+      socket.off('member-removed', handleMemberRemoved)
+      socket.off('removed-from-group', handleRemovedFromGroup)
+      socket.off('group-updated', handleGroupUpdated)
       disconnectChatSocket()
     }
   }, [token])
@@ -262,7 +312,14 @@ function Chat() {
 
     if (activeConversationId && token) {
       const socket = connectChatSocket(token)
-      socket.emit('join-conversation', activeConversationId)
+      const activeConv = conversations.find(c => c._id === activeConversationId)
+      if (activeConv?.conversationType === 'group') {
+        // For groups, we need to find the group ID and join the group room
+        // The backend uses conversationId for group rooms
+        socket.emit('join-conversation', activeConversationId)
+      } else {
+        socket.emit('join-conversation', activeConversationId)
+      }
       void loadMessages()
       setTypingUsers([])
     }
@@ -356,7 +413,13 @@ function Chat() {
         <section className={`border-r border-slate-200 bg-white p-4 flex flex-col h-full min-h-0 ${showMessagesInMobile ? 'hidden lg:flex' : 'flex'}`}>
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
             <h2 className="text-base font-semibold text-slate-900">Messages</h2>
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Direct</span>
+            <button
+              onClick={() => setShowCreateGroup(true)}
+              className="rounded-lg bg-blue-600 p-2 text-white hover:bg-blue-700 transition"
+              title="Create Group"
+            >
+              <Users className="h-4 w-4" />
+            </button>
           </div>
         {loadingConversations && <div className="text-sm text-slate-500">Loading conversations...</div>}
         {error && <div className="text-sm text-red-600 mb-2">{error}</div>}
@@ -430,11 +493,15 @@ function Chat() {
               </button>
               <button
                 onClick={() => {
-                  const participantId = getParticipantId(activeConversation, user?.userId)
-                  if (participantId) navigate(`/user/${participantId}`)
+                  if (activeConversation.conversationType === 'group') {
+                    setShowGroupInfo(true)
+                  } else {
+                    const participantId = getParticipantId(activeConversation, user?.userId)
+                    if (participantId) navigate(`/user/${participantId}`)
+                  }
                 }}
                 className="flex items-center gap-3 flex-1 hover:opacity-80 transition cursor-pointer"
-                title="View profile"
+                title={activeConversation.conversationType === 'group' ? 'View group info' : 'View profile'}
               >
                 {getParticipantAvatar(activeConversation, user?.userId) ? (
                   <img
@@ -449,17 +516,37 @@ function Chat() {
                 )}
                 <div className="flex-1 text-left">
                   <h3 className="text-base font-semibold text-slate-900">{getParticipantLabel(activeConversation, user?.userId)}</h3>
-                  {typingUsers.length > 0 && (
+                  {activeConversation.conversationType === 'group' ? (
+                    <p className="text-xs text-slate-500">{activeConversation.participants.length} members</p>
+                  ) : typingUsers.length > 0 ? (
                     <p className="text-xs text-blue-500">typing...</p>
-                  )}
+                  ) : null}
                 </div>
               </button>
-              <div className="hidden md:flex items-center gap-2 text-xs">
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 font-medium">Online</span>
+              <div className="flex items-center gap-2">
+                {activeConversation.conversationType === 'group' && (
+                  <button
+                    onClick={() => setShowGroupInfo(true)}
+                    className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 transition"
+                    title="Group Info"
+                  >
+                    <Info className="h-5 w-5" />
+                  </button>
+                )}
+                {activeConversation.conversationType === 'direct' && (
+                  <div className="hidden md:flex items-center gap-2 text-xs">
+                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 font-medium">Online</span>
+                  </div>
+                )}
               </div>
             </header>
 
             <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
+              {groupNotification && (
+                <div className="mb-4 rounded-lg bg-blue-50 border border-blue-200 p-3 text-center text-sm text-blue-700">
+                  {groupNotification}
+                </div>
+              )}
               {loadingMessages ? (
                 <div className="text-sm text-slate-500">Loading messages...</div>
               ) : (
@@ -492,6 +579,9 @@ function Chat() {
                         <div
                           className={`group max-w-[600px] rounded-2xl px-4 py-2.5 break-words whitespace-pre-wrap ${isOwn ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-900 border border-slate-200 shadow-sm'} ${isCopied ? (isOwn ? 'ring-2 ring-blue-300' : 'ring-2 ring-blue-400') : ''}`}
                         >
+                          {!isOwn && activeConversation?.conversationType === 'group' && typeof msg.senderId !== 'string' && (
+                            <p className="text-xs font-semibold mb-1 text-blue-600">{msg.senderId.username}</p>
+                          )}
                           <p className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">{displayContent}</p>
                           {isLong && (
                             <button
@@ -617,6 +707,30 @@ function Chat() {
         )}
       </section>
     </div>
+      <CreateGroupModal
+        isOpen={showCreateGroup}
+        onClose={() => setShowCreateGroup(false)}
+        onGroupCreated={async () => {
+          const data = await getUserConversations()
+          setConversations(data)
+        }}
+      />
+      {activeConversation?.conversationType === 'group' && user && (
+        <GroupInfo
+          conversationId={activeConversation._id}
+          currentUserId={user.userId}
+          isOpen={showGroupInfo}
+          onClose={() => setShowGroupInfo(false)}
+          onGroupUpdated={async () => {
+            const data = await getUserConversations()
+            setConversations(data)
+          }}
+          onGroupDeleted={() => {
+            setActiveConversationId(null)
+            void getUserConversations().then(setConversations)
+          }}
+        />
+      )}
   </div>
   )
 }
