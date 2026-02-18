@@ -9,7 +9,7 @@ import type { ChatMessage, Conversation, MessageSummary } from '../types'
 const formatTime = (iso?: string) => {
   if (!iso) return ''
   const date = new Date(iso)
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return date.toLocaleTimeString([], {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
 const isSameDay = (left: Date, right: Date) =>
