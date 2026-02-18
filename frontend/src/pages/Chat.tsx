@@ -450,10 +450,13 @@ function Chat() {
                 <div className="flex-1 text-left">
                   <h3 className="text-base font-semibold text-slate-900">{getParticipantLabel(activeConversation, user?.userId)}</h3>
                   {typingUsers.length > 0 && (
-                    <p className="text-xs text-blue-500">{typingUsers.map((u) => u.username).join(', ')} typing...</p>
+                    <p className="text-xs text-blue-500">typing...</p>
                   )}
                 </div>
               </button>
+              <div className="hidden md:flex items-center gap-2 text-xs">
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 font-medium">Online</span>
+              </div>
             </header>
 
             <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
