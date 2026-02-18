@@ -2,7 +2,16 @@
 
 A full-stack real-time messaging platform with user authentication, direct chats, group messaging, and media sharing capabilities.
 
-## 📋 Table of Contents
+## � Live Demo
+
+🌐 **Frontend:** https://chit-chat-1iab.vercel.app/  
+🔌 **Backend API:** https://chit-chat-lu1k.onrender.com  
+
+**Try it now:** [Open Chit-Chat](https://chit-chat-1iab.vercel.app/)
+
+---
+
+## �📋 Table of Contents
 
 - [Overview](#overview)
 - [Tech Stack](#tech-stack)
@@ -278,6 +287,11 @@ graph TD
 
 ## 📦 Deployment
 
+### ✅ Deployed & Live
+
+- **Frontend:** https://chit-chat-1iab.vercel.app/
+- **Backend API:** https://chit-chat-lu1k.onrender.com
+
 ### Backend: Render.com
 
 1. **Connect GitHub** to Render
@@ -426,4 +440,6 @@ chit-chat/
 ---
 
 **Status:** ✅ Live on Render + Vercel  
+**Frontend:** https://chit-chat-1iab.vercel.app/  
+**Backend:** https://chit-chat-lu1k.onrender.com  
 **Last Updated:** February 18, 2026
