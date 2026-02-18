@@ -80,3 +80,15 @@ export interface IMessage {
   createdAt?: Date;
   updatedAt?: Date;
 }
+
+export interface IGroup {
+  _id: string;
+  name: string;
+  description?: string;
+  adminId: Types.ObjectId;
+  memberIds: Types.ObjectId[];
+  groupPictureUrl?: string;
+  conversationId: Types.ObjectId;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
