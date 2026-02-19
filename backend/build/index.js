@@ -14,6 +14,8 @@ const env_1 = require("./src/config/env");
 const http_1 = require("http");
 const socket_io_1 = require("socket.io");
 const chatHandler_1 = require("./src/socket/chatHandler");
+const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
+const swagger_1 = require("./src/swagger");
 const app = (0, express_1.default)();
 const httpServer = (0, http_1.createServer)(app);
 const allowedOrigins = (env_1.FRONTEND || 'http://localhost:3001,http://localhost:5173,http://localhost:4173,http://127.0.0.1:3000')
@@ -26,8 +28,13 @@ const io = new socket_io_1.Server(httpServer, {
     }
 });
 // Middleware
-app.use((0, cors_1.default)());
+app.use((0, cors_1.default)({ origin: allowedOrigins, credentials: true }));
 app.use(express_1.default.json());
+// API Documentation
+app.use('/api-docs', swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swagger_1.swaggerSpec, {
+    customSiteTitle: 'Chit-Chat API Documentation',
+    customCss: '.swagger-ui .topbar { display: none }',
+}));
 // Routes
 app.use('/api/chat', chat_route_1.router);
 app.use('/api/auth', auth_route_1.router);

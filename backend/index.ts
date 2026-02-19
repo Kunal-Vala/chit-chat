@@ -9,6 +9,8 @@ import { FRONTEND } from './src/config/env';
 import { createServer } from 'http';
 import { Server } from "socket.io";
 import { setupChatHandlers } from './src/socket/chatHandler';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './src/swagger';
 
 
 const app = express();
@@ -29,6 +31,12 @@ const io = new Server(httpServer, {
 // Middleware
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
+
+// API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'Chit-Chat API Documentation',
+  customCss: '.swagger-ui .topbar { display: none }',
+}));
 
 // Routes
 app.use('/api/chat', ChatRouter);

@@ -293,7 +293,7 @@ const sendFriendRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         // Check if target user has already sent a request to current user (mutual interest)
         const currentUser = yield User_1.default.findById(currentUserId);
-        const incomingRequest = (_b = currentUser === null || currentUser === void 0 ? void 0 : currentUser.friendRequests) === null || _b === void 0 ? void 0 : _b.find(req => req.from.toString() === targetUserId && req.status === 'pending');
+        const incomingRequest = (_b = currentUser === null || currentUser === void 0 ? void 0 : currentUser.friendRequests) === null || _b === void 0 ? void 0 : _b.find((req) => req.from.toString() === targetUserId && req.status === 'pending');
         // If there's a pending request from target user, accept it automatically (mutual interest)
         if (incomingRequest) {
             // Add each other as friends
@@ -350,7 +350,7 @@ const acceptFriendRequest = (req, res) => __awaiter(void 0, void 0, void 0, func
         }
         // Verify the friend request actually exists before accepting
         const currentUser = yield User_1.default.findById(currentUserId);
-        const friendRequestExists = (_b = currentUser === null || currentUser === void 0 ? void 0 : currentUser.friendRequests) === null || _b === void 0 ? void 0 : _b.some(req => req.from.toString() === requesterId && req.status === 'pending');
+        const friendRequestExists = (_b = currentUser === null || currentUser === void 0 ? void 0 : currentUser.friendRequests) === null || _b === void 0 ? void 0 : _b.some((req) => req.from.toString() === requesterId && req.status === 'pending');
         if (!friendRequestExists) {
             return res.status(404).json({ error: 'Friend request not found or already processed' });
         }
@@ -395,7 +395,7 @@ const rejectFriendRequest = (req, res) => __awaiter(void 0, void 0, void 0, func
         }
         // Verify the friend request exists before rejecting
         const currentUser = yield User_1.default.findById(currentUserId);
-        const friendRequestExists = (_b = currentUser === null || currentUser === void 0 ? void 0 : currentUser.friendRequests) === null || _b === void 0 ? void 0 : _b.some(req => req.from.toString() === requesterId && req.status === 'pending');
+        const friendRequestExists = (_b = currentUser === null || currentUser === void 0 ? void 0 : currentUser.friendRequests) === null || _b === void 0 ? void 0 : _b.some((req) => req.from.toString() === requesterId && req.status === 'pending');
         if (!friendRequestExists) {
             return res.status(404).json({ error: 'Friend request not found or already processed' });
         }
@@ -484,7 +484,7 @@ const getFriendsList = (req, res) => __awaiter(void 0, void 0, void 0, function*
             .select('-password -tokenVersion -email')
             .sort({ onlineStatus: -1, username: 1 }) // Online first, then alphabetically
             .lean();
-        const onlineCount = friends.filter(friend => friend.onlineStatus).length;
+        const onlineCount = friends.filter((friend) => friend.onlineStatus).length;
         return res.status(200).json({
             friends,
             total: friends.length,
@@ -513,7 +513,7 @@ const getFriendRequests = (req, res) => __awaiter(void 0, void 0, void 0, functi
             return res.status(404).json({ error: 'User not found' });
         }
         // Filter only pending requests and sort by newest first
-        const pendingRequests = ((_b = currentUser.friendRequests) === null || _b === void 0 ? void 0 : _b.filter(req => req.status === 'pending').sort((a, b) => { var _a, _b; return (((_a = b.createdAt) === null || _a === void 0 ? void 0 : _a.getTime()) || 0) - (((_b = a.createdAt) === null || _b === void 0 ? void 0 : _b.getTime()) || 0); })) || [];
+        const pendingRequests = ((_b = currentUser.friendRequests) === null || _b === void 0 ? void 0 : _b.filter((req) => req.status === 'pending').sort((a, b) => { var _a, _b; return (((_a = b.createdAt) === null || _a === void 0 ? void 0 : _a.getTime()) || 0) - (((_b = a.createdAt) === null || _b === void 0 ? void 0 : _b.getTime()) || 0); })) || [];
         return res.status(200).json({
             friendRequests: pendingRequests,
             total: pendingRequests.length
@@ -545,17 +545,17 @@ const checkFriendshipStatus = (req, res) => __awaiter(void 0, void 0, void 0, fu
             return res.status(404).json({ error: 'User not found' });
         }
         // Check if they are friends
-        const areFriends = (_b = currentUser.friends) === null || _b === void 0 ? void 0 : _b.some(friendId => friendId.toString() === targetUserId);
+        const areFriends = (_b = currentUser.friends) === null || _b === void 0 ? void 0 : _b.some((friendId) => friendId.toString() === targetUserId);
         if (areFriends) {
             return res.status(200).json({ status: 'friends' });
         }
         // Check if current user sent a request to target user (pending in target's requests)
-        const sentRequest = (_c = targetUser.friendRequests) === null || _c === void 0 ? void 0 : _c.find(req => req.from.toString() === currentUserId && req.status === 'pending');
+        const sentRequest = (_c = targetUser.friendRequests) === null || _c === void 0 ? void 0 : _c.find((req) => req.from.toString() === currentUserId && req.status === 'pending');
         if (sentRequest) {
             return res.status(200).json({ status: 'request_sent' });
         }
         // Check if target user sent a request to current user (pending in current's requests)
-        const receivedRequest = (_d = currentUser.friendRequests) === null || _d === void 0 ? void 0 : _d.find(req => req.from.toString() === targetUserId && req.status === 'pending');
+        const receivedRequest = (_d = currentUser.friendRequests) === null || _d === void 0 ? void 0 : _d.find((req) => req.from.toString() === targetUserId && req.status === 'pending');
         if (receivedRequest) {
             return res.status(200).json({ status: 'request_received' });
         }
