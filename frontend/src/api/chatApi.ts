@@ -2,6 +2,14 @@ import { AxiosError } from 'axios'
 import apiClient from './axiosConfig'
 import type { ChatMessage, Conversation, PaginationInfo } from '../types'
 
+export interface UploadConversationImageResponse {
+  mediaUrl: string
+  messageType: 'image'
+  fileName: string
+  fileSize: number
+  mimeType: string
+}
+
 const extractErrorMessage = (error: unknown): string | undefined => {
   if (error instanceof AxiosError) {
     const data = error.response?.data
@@ -76,5 +84,16 @@ export const deleteMessage = async (messageId: string): Promise<void> => {
     await apiClient.delete(`/chat/messages/${messageId}`)
   } catch (error) {
     throw new Error(extractErrorMessage(error) ?? 'Failed to delete message')
+  }
+}
+
+export const uploadConversationImage = async (conversationId: string, file: File): Promise<UploadConversationImageResponse> => {
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await apiClient.post<UploadConversationImageResponse>(`/chat/messages/${conversationId}/upload-image`, formData)
+    return response.data
+  } catch (error) {
+    throw new Error(extractErrorMessage(error) ?? 'Failed to upload image')
   }
 }

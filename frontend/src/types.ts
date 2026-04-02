@@ -63,6 +63,9 @@ export interface ChatMessage {
     content: string
     messageType: MessageType
     mediaUrl?: string
+    fileName?: string
+    fileSize?: number
+    mimeType?: string
     deliveryStatus: DeliveryStatus
     sentAt: string
     deliveredAt?: string

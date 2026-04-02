@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react'
-import { Users, Info } from 'lucide-react'
+import { Users, Info, ImagePlus, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { connectChatSocket, disconnectChatSocket } from '../socket/chatSocket'
-import { deleteMessage, getMessages, getUserConversations, markConversationAsRead } from '../api/chatApi'
+import { deleteMessage, getMessages, getUserConversations, markConversationAsRead, uploadConversationImage } from '../api/chatApi'
 import { CreateGroupModal } from '../components/CreateGroupModal'
 import { GroupInfo } from '../components/GroupInfo'
 import type { ChatMessage, Conversation, MessageSummary } from '../types'
@@ -61,6 +61,9 @@ const getLastMessageSummary = (conversation: Conversation): MessageSummary | nul
   return conversation.lastMessageId ?? null
 }
 
+const CHAT_IMAGE_MAX_SIZE_BYTES = 10 * 1024 * 1024
+const CHAT_IMAGE_ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+
 function Chat() {
   const { user, token } = useAuth()
   const [searchParams] = useSearchParams()
@@ -83,12 +86,17 @@ function Chat() {
   const [showCreateGroup, setShowCreateGroup] = useState(false)
   const [showGroupInfo, setShowGroupInfo] = useState(false)
   const [groupNotification, setGroupNotification] = useState<string | null>(null)
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null)
+  const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
 
   const activeConversationRef = useRef<string | null>(null)
   const userIdRef = useRef<string | null>(user?.userId ?? null)
+  const isPageVisibleRef = useRef(true)
   const typingTimeout = useRef<number | null>(null)
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const imageInputRef = useRef<HTMLInputElement | null>(null)
   const [isPageVisible, setIsPageVisible] = useState(true)
 
   useEffect(() => {
@@ -98,6 +106,10 @@ function Chat() {
   useEffect(() => {
     userIdRef.current = user?.userId ?? null
   }, [user?.userId])
+
+  useEffect(() => {
+    isPageVisibleRef.current = isPageVisible
+  }, [isPageVisible])
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -116,6 +128,20 @@ function Chat() {
     messageInputRef.current.style.height = `${nextHeight}px`
     messageInputRef.current.style.overflowY = messageInputRef.current.scrollHeight > maxHeight ? 'auto' : 'hidden'
   }, [messageInput])
+
+  useEffect(() => {
+    if (!selectedImageFile) {
+      setSelectedImagePreview(null)
+      return
+    }
+
+    const previewUrl = URL.createObjectURL(selectedImageFile)
+    setSelectedImagePreview(previewUrl)
+
+    return () => {
+      URL.revokeObjectURL(previewUrl)
+    }
+  }, [selectedImageFile])
 
   const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
     window.requestAnimationFrame(() => {
@@ -185,7 +211,7 @@ function Chat() {
           return [...prev, message]
         })
 
-        if (isPageVisible && getSenderId(message.senderId) !== userIdRef.current) {
+        if (isPageVisibleRef.current && getSenderId(message.senderId) !== userIdRef.current) {
           socket.emit('message-read', message._id)
         }
       } else {
@@ -313,14 +339,7 @@ function Chat() {
 
     if (activeConversationId && token) {
       const socket = connectChatSocket(token)
-      const activeConv = conversations.find(c => c._id === activeConversationId)
-      if (activeConv?.conversationType === 'group') {
-        // For groups, we need to find the group ID and join the group room
-        // The backend uses conversationId for group rooms
-        socket.emit('join-conversation', activeConversationId)
-      } else {
-        socket.emit('join-conversation', activeConversationId)
-      }
+      socket.emit('join-conversation', activeConversationId)
       void loadMessages()
       setTypingUsers([])
     }
@@ -349,14 +368,42 @@ function Chat() {
     return firstUnread?._id ?? null
   }, [messages, user?.userId])
 
-  const handleSendMessage = () => {
-    if (!messageInput.trim() || !activeConversationId || !token) return
+  const handleSendMessage = async () => {
+    if ((!messageInput.trim() && !selectedImageFile) || !activeConversationId || !token || isUploadingImage) return
     const socket = connectChatSocket(token)
-    socket.emit('send-message', {
-      conversationId: activeConversationId,
-      content: messageInput.trim(),
-      messageType: 'text',
-    })
+    const trimmedContent = messageInput.trim()
+
+    if (selectedImageFile) {
+      try {
+        setIsUploadingImage(true)
+        setError(null)
+        const upload = await uploadConversationImage(activeConversationId, selectedImageFile)
+
+        socket.emit('send-message', {
+          conversationId: activeConversationId,
+          content: trimmedContent || upload.fileName || 'Image',
+          messageType: 'image',
+          mediaUrl: upload.mediaUrl,
+          fileName: upload.fileName,
+          fileSize: upload.fileSize,
+          mimeType: upload.mimeType,
+        })
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to upload image')
+        return
+      } finally {
+        setIsUploadingImage(false)
+      }
+
+      setSelectedImageFile(null)
+    } else {
+      socket.emit('send-message', {
+        conversationId: activeConversationId,
+        content: trimmedContent,
+        messageType: 'text',
+      })
+    }
+
     setMessageInput('')
     setShowEmojiPicker(false)
   }
@@ -376,7 +423,7 @@ function Chat() {
     if (event.key !== 'Enter') return
     if (event.shiftKey) return
     event.preventDefault()
-    handleSendMessage()
+    void handleSendMessage()
   }
 
   const handleEmojiSelect = (emojiData: EmojiClickData) => {
@@ -394,6 +441,7 @@ function Chat() {
   }
 
   const handleCopyMessage = async (messageId: string, content: string) => {
+    if (!content) return
     try {
       await navigator.clipboard.writeText(content)
       setCopiedMessageId(messageId)
@@ -404,6 +452,39 @@ function Chat() {
       setError(err instanceof Error ? err.message : 'Failed to copy message')
     }
   }
+
+  const handleImagePickerClick = () => {
+    imageInputRef.current?.click()
+  }
+
+  const clearSelectedImage = () => {
+    setSelectedImageFile(null)
+    if (imageInputRef.current) {
+      imageInputRef.current.value = ''
+    }
+  }
+
+  const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!CHAT_IMAGE_ALLOWED_TYPES.has(file.type)) {
+      setError('Only JPG, PNG, WEBP, and GIF images are allowed')
+      event.target.value = ''
+      return
+    }
+
+    if (file.size > CHAT_IMAGE_MAX_SIZE_BYTES) {
+      setError('Image size exceeds 10 MB limit')
+      event.target.value = ''
+      return
+    }
+
+    setError(null)
+    setSelectedImageFile(file)
+  }
+
+  const canSendMessage = Boolean((messageInput.trim() || selectedImageFile) && activeConversationId && token && !isUploadingImage)
 
   const toggleMessageExpanded = (messageId: string) => {
     setExpandedMessages((prev) => {
@@ -570,8 +651,10 @@ function Chat() {
                 messages.map((msg, index) => {
                   const isOwn = getSenderId(msg.senderId) === user?.userId
                   const isExpanded = expandedMessages.has(msg._id)
-                  const isLong = msg.content.length > 300
+                  const hasDisplayText = Boolean(msg.content?.trim())
+                  const isLong = hasDisplayText && msg.content.length > 300
                   const displayContent = isLong && !isExpanded ? `${msg.content.slice(0, 300)}...` : msg.content
+                  const copyValue = hasDisplayText ? msg.content : (msg.mediaUrl ?? '')
                   const isCopied = copiedMessageId === msg._id
                   const previous = messages[index - 1]
                   const showDateDivider = !previous || !isSameDay(new Date(previous.sentAt), new Date(msg.sentAt))
@@ -599,8 +682,17 @@ function Chat() {
                           {!isOwn && activeConversation?.conversationType === 'group' && typeof msg.senderId !== 'string' && (
                             <p className="text-xs font-semibold mb-1" style={{ color: 'var(--app-accent-2)' }}>{msg.senderId.username}</p>
                           )}
-                          <p className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">{displayContent}</p>
-                          {isLong && (
+                          {msg.messageType === 'image' && msg.mediaUrl && (
+                            <a href={msg.mediaUrl} target="_blank" rel="noreferrer" className="block mb-2">
+                              <img
+                                src={msg.mediaUrl}
+                                alt={msg.fileName ?? 'Shared image'}
+                                className="max-h-72 w-full max-w-sm rounded-xl object-cover"
+                              />
+                            </a>
+                          )}
+                          {hasDisplayText && <p className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">{displayContent}</p>}
+                          {isLong && hasDisplayText && (
                             <button
                               type="button"
                               onClick={() => toggleMessageExpanded(msg._id)}
@@ -624,8 +716,9 @@ function Chat() {
                             )}
                             <button
                               type="button"
-                              onClick={() => handleCopyMessage(msg._id, msg.content)}
-                              className={`flex items-center gap-1 text-xs ${isOwn ? 'text-white/80 hover:text-white' : 'app-muted hover:text-[color:var(--app-text)]'}`}
+                              onClick={() => handleCopyMessage(msg._id, copyValue)}
+                              disabled={!copyValue}
+                              className={`flex items-center gap-1 text-xs ${isOwn ? 'text-white/80 hover:text-white' : 'app-muted hover:text-[color:var(--app-text)]'} disabled:opacity-40 disabled:cursor-not-allowed`}
                               title="Copy message"
                             >
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -660,48 +753,80 @@ function Chat() {
             </div>
 
             <div className="px-6 py-4 shrink-0">
-              <div className="relative flex items-end gap-3 rounded-2xl border app-border app-card-inner px-4 py-3 focus-within:ring-2 focus-within:ring-[color:var(--app-ring)] transition">
-                <button
-                  type="button"
-                  onClick={() => setShowEmojiPicker((prev) => !prev)}
-                  className="app-icon-button"
-                  title="Add emoji"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
-                    <path d="M8 10h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                    <path d="M16 10h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                    <path d="M8 14c1.333 1.333 2.667 2 4 2s2.667-.667 4-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
-                </button>
-                {showEmojiPicker && (
-                  <div className="absolute bottom-14 left-2 z-20">
-                    <EmojiPicker
-                      onEmojiClick={handleEmojiSelect}
-                      searchPlaceHolder="Search"
-                      height={360}
-                      width={320}
-                      skinTonesDisabled
-                      previewConfig={{ showPreview: false }}
-                    />
+              <div className="relative rounded-2xl border app-border app-card-inner px-4 py-3 focus-within:ring-2 focus-within:ring-[color:var(--app-ring)] transition">
+                {selectedImageFile && selectedImagePreview && (
+                  <div className="mb-3 rounded-xl border app-border p-2 flex items-center gap-3">
+                    <img src={selectedImagePreview} alt={selectedImageFile.name} className="w-14 h-14 rounded-lg object-cover" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{selectedImageFile.name}</p>
+                      <p className="text-xs app-muted">{(selectedImageFile.size / (1024 * 1024)).toFixed(2)} MB</p>
+                    </div>
+                    <button type="button" onClick={clearSelectedImage} className="app-icon-button" title="Remove image">
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
                 )}
-                <textarea
-                  ref={messageInputRef}
-                  rows={1}
-                  value={messageInput}
-                  onChange={(e) => handleMessageInputChange(e.target.value)}
-                  onKeyDown={handleMessageKeyDown}
-                  placeholder="Type a message..."
-                  className="flex-1 resize-none bg-transparent px-2 py-1 text-[15px] leading-relaxed text-[color:var(--app-text)] placeholder:text-[color:var(--app-muted)] focus:outline-none"
-                />
-                <button
-                  onClick={handleSendMessage}
-                  disabled={!messageInput.trim()}
-                  className="app-primary-button px-5 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Send
-                </button>
+
+                <div className="relative flex items-end gap-3">
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={handleImageFileChange}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleImagePickerClick}
+                    className="app-icon-button"
+                    title="Attach image"
+                  >
+                    <ImagePlus className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker((prev) => !prev)}
+                    className="app-icon-button"
+                    title="Add emoji"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
+                      <path d="M8 10h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M16 10h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M8 14c1.333 1.333 2.667 2 4 2s2.667-.667 4-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                  {showEmojiPicker && (
+                    <div className="absolute bottom-14 left-10 z-20">
+                      <EmojiPicker
+                        onEmojiClick={handleEmojiSelect}
+                        searchPlaceHolder="Search"
+                        height={360}
+                        width={320}
+                        skinTonesDisabled
+                        previewConfig={{ showPreview: false }}
+                      />
+                    </div>
+                  )}
+                  <textarea
+                    ref={messageInputRef}
+                    rows={1}
+                    value={messageInput}
+                    onChange={(e) => handleMessageInputChange(e.target.value)}
+                    onKeyDown={handleMessageKeyDown}
+                    placeholder={selectedImageFile ? 'Add a caption (optional)...' : 'Type a message...'}
+                    className="flex-1 resize-none bg-transparent px-2 py-1 text-[15px] leading-relaxed text-[color:var(--app-text)] placeholder:text-[color:var(--app-muted)] focus:outline-none"
+                  />
+                  <button
+                    onClick={() => {
+                      void handleSendMessage()
+                    }}
+                    disabled={!canSendMessage}
+                    className="app-primary-button px-5 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isUploadingImage ? 'Uploading...' : 'Send'}
+                  </button>
+                </div>
               </div>
             </div>
           </>
