@@ -73,9 +73,6 @@ export const setVolatileToken = (token: string | null): void => {
 export const apiClient: AxiosInstance = axios.create({
 	baseURL: API_BASE_URL,
 	timeout: 10_000,
-	headers: {
-		'Content-Type': 'application/json',
-	},
 })
 
 // Request interceptor: attach Authorization header when a token exists.
@@ -85,6 +82,14 @@ apiClient.interceptors.request.use((config) => {
 	if (token) {
 		config.headers = config.headers ?? {}
 		config.headers.set('Authorization', `Bearer ${token}`)
+	}
+
+	// Let the browser set multipart boundaries for FormData uploads.
+	if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+		config.headers?.delete('Content-Type')
+	} else {
+		config.headers = config.headers ?? {}
+		config.headers.set('Content-Type', 'application/json')
 	}
 
 	return config
