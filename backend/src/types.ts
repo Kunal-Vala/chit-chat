@@ -63,6 +63,9 @@ export interface IMessage {
   content: string;
   messageType: 'text' | 'image' | 'file';
   mediaUrl?: string;
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
   deliveryStatus: 'sent' | 'delivered' | 'read';
   sentAt: Date;
   deliveredAt?: Date;

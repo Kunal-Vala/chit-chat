@@ -75,6 +75,9 @@ const setupChatHandlers = (io) => {
                     content: data.content,
                     messageType: data.messageType,
                     mediaUrl: data.mediaUrl,
+                    fileName: data.fileName,
+                    fileSize: data.fileSize,
+                    mimeType: data.mimeType,
                     deliveryStatus: 'sent',
                     sentAt: new Date(),
                 });
@@ -229,6 +232,9 @@ const setupChatHandlers = (io) => {
                     content: data.content,
                     messageType: data.messageType,
                     mediaUrl: data.mediaUrl,
+                    fileName: data.fileName,
+                    fileSize: data.fileSize,
+                    mimeType: data.mimeType,
                     deliveryStatus: 'sent',
                     sentAt: new Date(),
                 });

@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from "../types";
 import Conversation from "../models/Conversation";
 import Message from "../models/Message";
 import User from "../models/User";
+import { uploadBufferToCloudinary } from "../lib/cloudinary";
 
 // GET api/chat/conversation - get all user's conversation
 
@@ -241,5 +242,57 @@ export const markConversationAsRead = async (req: AuthenticatedRequest, res: Res
     } catch (error) {
         console.error('Error marking as read:', error);
         res.status(500).json({ error: 'Failed to mark as read' });
+    }
+};
+
+const sanitizeFileName = (name: string): string => {
+    const normalized = name.replace(/[^a-zA-Z0-9._ -]/g, '').trim();
+    if (!normalized) {
+        return 'image';
+    }
+    return normalized.slice(0, 120);
+};
+
+// POST /api/chat/messages/:conversationId/upload-image - Upload image for a conversation
+export const uploadConversationImage = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+        const { conversationId } = req.params;
+
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        if (!conversationId) {
+            return res.status(400).json({ error: 'Conversation Id Required' });
+        }
+
+        const conversation = await Conversation.findOne({
+            _id: conversationId,
+            participants: userId,
+        });
+
+        if (!conversation) {
+            return res.status(404).json({ error: 'Conversation not found' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ error: 'Image file is required' });
+        }
+
+        const folder = `chat-images/${conversationId}`;
+        const mediaUrl = await uploadBufferToCloudinary(req.file.buffer, folder);
+
+        return res.json({
+            mediaUrl,
+            messageType: 'image',
+            fileName: sanitizeFileName(req.file.originalname),
+            fileSize: req.file.size,
+            mimeType: req.file.mimetype,
+        });
+
+    } catch (error) {
+        console.error('Error uploading conversation image:', error);
+        return res.status(500).json({ error: 'Failed to upload conversation image' });
     }
 };

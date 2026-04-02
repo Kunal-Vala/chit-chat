@@ -83,6 +83,9 @@ export const setupChatHandlers = (io: Server) => {
             content: string;
             messageType: 'text' | 'image' | 'file';
             mediaUrl?: string;
+            fileName?: string;
+            fileSize?: number;
+            mimeType?: string;
         }) => {
             try {
                 // create message in database
@@ -93,6 +96,9 @@ export const setupChatHandlers = (io: Server) => {
                     content: data.content,
                     messageType: data.messageType,
                     mediaUrl: data.mediaUrl,
+                    fileName: data.fileName,
+                    fileSize: data.fileSize,
+                    mimeType: data.mimeType,
                     deliveryStatus: 'sent',
                     sentAt: new Date(),
                 });
@@ -262,6 +268,9 @@ export const setupChatHandlers = (io: Server) => {
             content: string;
             messageType: 'text' | 'image' | 'file';
             mediaUrl?: string;
+            fileName?: string;
+            fileSize?: number;
+            mimeType?: string;
         }) => {
             try {
                 const group = await Group.findById(data.groupId);
@@ -285,6 +294,9 @@ export const setupChatHandlers = (io: Server) => {
                     content: data.content,
                     messageType: data.messageType,
                     mediaUrl: data.mediaUrl,
+                    fileName: data.fileName,
+                    fileSize: data.fileSize,
+                    mimeType: data.mimeType,
                     deliveryStatus: 'sent',
                     sentAt: new Date(),
                 });

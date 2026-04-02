@@ -12,10 +12,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.markConversationAsRead = exports.editMessage = exports.deleteMessage = exports.getMessages = exports.getConversation = exports.createConversation = exports.getUserConversations = void 0;
+exports.uploadConversationImage = exports.markConversationAsRead = exports.editMessage = exports.deleteMessage = exports.getMessages = exports.getConversation = exports.createConversation = exports.getUserConversations = void 0;
 const Conversation_1 = __importDefault(require("../models/Conversation"));
 const Message_1 = __importDefault(require("../models/Message"));
 const User_1 = __importDefault(require("../models/User"));
+const cloudinary_1 = require("../lib/cloudinary");
 // GET api/chat/conversation - get all user's conversation
 const getUserConversations = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
@@ -220,3 +221,48 @@ const markConversationAsRead = (req, res) => __awaiter(void 0, void 0, void 0, f
     }
 });
 exports.markConversationAsRead = markConversationAsRead;
+const sanitizeFileName = (name) => {
+    const normalized = name.replace(/[^a-zA-Z0-9._ -]/g, '').trim();
+    if (!normalized) {
+        return 'image';
+    }
+    return normalized.slice(0, 120);
+};
+// POST /api/chat/messages/:conversationId/upload-image - Upload image for a conversation
+const uploadConversationImage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+        const { conversationId } = req.params;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+        if (!conversationId) {
+            return res.status(400).json({ error: 'Conversation Id Required' });
+        }
+        const conversation = yield Conversation_1.default.findOne({
+            _id: conversationId,
+            participants: userId,
+        });
+        if (!conversation) {
+            return res.status(404).json({ error: 'Conversation not found' });
+        }
+        if (!req.file) {
+            return res.status(400).json({ error: 'Image file is required' });
+        }
+        const folder = `chat-images/${conversationId}`;
+        const mediaUrl = yield (0, cloudinary_1.uploadBufferToCloudinary)(req.file.buffer, folder);
+        return res.json({
+            mediaUrl,
+            messageType: 'image',
+            fileName: sanitizeFileName(req.file.originalname),
+            fileSize: req.file.size,
+            mimeType: req.file.mimetype,
+        });
+    }
+    catch (error) {
+        console.error('Error uploading conversation image:', error);
+        return res.status(500).json({ error: 'Failed to upload conversation image' });
+    }
+});
+exports.uploadConversationImage = uploadConversationImage;

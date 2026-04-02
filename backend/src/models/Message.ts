@@ -29,6 +29,18 @@ const messageSchema = new Schema<IMessage>({
         type: String
     },
 
+    fileName: {
+        type: String
+    },
+
+    fileSize: {
+        type: Number
+    },
+
+    mimeType: {
+        type: String
+    },
+
     deliveryStatus: {
         type: String,
         enum: ['sent', 'delivered', 'read'],

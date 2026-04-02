@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticateUser } from '../middleware/auth.middleware';
+import { handleChatImageUpload } from '../middleware/upload.middleware';
 import {
     getUserConversations,
     createConversation,
@@ -7,7 +8,8 @@ import {
     getMessages,
     deleteMessage,
     editMessage,
-    markConversationAsRead
+    markConversationAsRead,
+    uploadConversationImage
 } from '../controllers/chat.controller';
 
 export const router = Router();
@@ -220,6 +222,64 @@ router.put('/conversations/:conversationId/read', markConversationAsRead);
  */
 // Message routes
 router.get('/conversations/:conversationId/messages', getMessages);
+
+/**
+ * @swagger
+ * /api/chat/messages/{conversationId}/upload-image:
+ *   post:
+ *     summary: Upload an image for a conversation message
+ *     tags: [Chat]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: conversationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The conversation ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - file
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file (jpg/png/webp/gif), max 10MB
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 mediaUrl:
+ *                   type: string
+ *                 messageType:
+ *                   type: string
+ *                   example: image
+ *                 fileName:
+ *                   type: string
+ *                 fileSize:
+ *                   type: integer
+ *                 mimeType:
+ *                   type: string
+ *       400:
+ *         description: Invalid file or request
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Conversation not found
+ *       413:
+ *         description: File too large
+ */
+router.post('/messages/:conversationId/upload-image', handleChatImageUpload, uploadConversationImage);
 
 /**
  * @swagger

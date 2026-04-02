@@ -94,6 +94,7 @@ Many endpoints require authentication. To test authenticated endpoints:
 - `GET /conversations/:conversationId` - Get conversation details
 - `PUT /conversations/:conversationId/read` - Mark conversation as read
 - `GET /conversations/:conversationId/messages` - Get messages
+- `POST /messages/:conversationId/upload-image` - Upload image for a chat message (jpg/png/webp/gif, max 10MB)
 - `DELETE /messages/:messageId` - Delete a message
 - `PUT /messages/:messageId` - Edit a message
 
