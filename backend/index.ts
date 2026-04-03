@@ -11,6 +11,7 @@ import { Server } from "socket.io";
 import { setupChatHandlers } from './src/socket/chatHandler';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './src/swagger';
+import { Request,Response } from 'express';
 
 
 const app = express();
@@ -33,6 +34,9 @@ app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 
 // API Documentation
+app.get('/', (_req : Request, res : Response) => {
+  res.redirect('/api-docs');
+});
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'Chit-Chat API Documentation',
   customCss: '.swagger-ui .topbar { display: none }',
