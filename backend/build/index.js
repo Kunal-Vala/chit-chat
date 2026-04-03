@@ -31,6 +31,9 @@ const io = new socket_io_1.Server(httpServer, {
 app.use((0, cors_1.default)({ origin: allowedOrigins, credentials: true }));
 app.use(express_1.default.json());
 // API Documentation
+app.get('/', (_req, res) => {
+    res.redirect('/api-docs');
+});
 app.use('/api-docs', swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swagger_1.swaggerSpec, {
     customSiteTitle: 'Chit-Chat API Documentation',
     customCss: '.swagger-ui .topbar { display: none }',

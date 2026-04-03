@@ -97,3 +97,18 @@ export const uploadConversationImage = async (conversationId: string, file: File
     throw new Error(extractErrorMessage(error) ?? 'Failed to upload image')
   }
 }
+
+export const searchMessages = async (query: string, conversationId?: string, page = 1, limit = 30): Promise<{ results: ChatMessage[]; pagination: PaginationInfo }> => {
+  try {
+    const params = new URLSearchParams({
+      q: query,
+      page: String(page),
+      limit: String(limit),
+    })
+    if (conversationId) params.append('conversationId', conversationId)
+    const response = await apiClient.get<{ results: ChatMessage[]; pagination: PaginationInfo }>(`/chat/search?${params.toString()}`)
+    return response.data
+  } catch (error) {
+    throw new Error(extractErrorMessage(error) ?? 'Failed to search messages')
+  }
+}

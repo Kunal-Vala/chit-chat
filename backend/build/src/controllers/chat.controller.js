@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadConversationImage = exports.markConversationAsRead = exports.editMessage = exports.deleteMessage = exports.getMessages = exports.getConversation = exports.createConversation = exports.getUserConversations = void 0;
+exports.uploadConversationImage = exports.searchMessages = exports.markConversationAsRead = exports.editMessage = exports.deleteMessage = exports.getMessages = exports.getConversation = exports.createConversation = exports.getUserConversations = void 0;
 const Conversation_1 = __importDefault(require("../models/Conversation"));
 const Message_1 = __importDefault(require("../models/Message"));
 const User_1 = __importDefault(require("../models/User"));
@@ -255,6 +255,65 @@ const markConversationAsRead = (req, res) => __awaiter(void 0, void 0, void 0, f
     }
 });
 exports.markConversationAsRead = markConversationAsRead;
+// GET /api/chat/search - Search messages across conversations
+const searchMessages = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+        const { q, conversationId, limit = 30, page = 1 } = req.query;
+        if (!q || typeof q !== 'string' || !q.trim()) {
+            return res.status(400).json({ error: 'Search query required' });
+        }
+        // Verify user is part of the conversation (if specified)
+        if (conversationId && typeof conversationId === 'string') {
+            const conversation = yield Conversation_1.default.findOne({
+                _id: conversationId,
+                participants: userId,
+            });
+            if (!conversation) {
+                return res.status(401).json({ error: 'Unauthorized' });
+            }
+        }
+        const searchFilter = {
+            isDeleted: { $ne: true },
+            $text: { $search: q }
+        };
+        // If conversationId specified, limit to that conversation
+        if (conversationId && typeof conversationId === 'string') {
+            searchFilter.conversationId = conversationId;
+        }
+        else {
+            // Search across all conversations the user is part of
+            const userConversations = yield Conversation_1.default.find({ participants: userId });
+            searchFilter.conversationId = { $in: userConversations.map(c => c._id) };
+        }
+        const limitNum = Math.min(parseInt(limit) || 30, 100);
+        const pageNum = Math.max(parseInt(page) || 1, 1);
+        const skip = (pageNum - 1) * limitNum;
+        const results = yield Message_1.default.find(searchFilter)
+            .populate('senderId', 'username profilePictureUrl')
+            .populate('conversationId', '_id')
+            .sort({ sentAt: -1 })
+            .skip(skip)
+            .limit(limitNum)
+            .lean();
+        const totalResults = yield Message_1.default.countDocuments(searchFilter);
+        return res.json({
+            results,
+            pagination: {
+                page: pageNum,
+                limit: limitNum,
+                total: totalResults,
+                totalPages: Math.ceil(totalResults / limitNum)
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error searching messages:', error);
+        return res.status(500).json({ error: 'Failed to search messages' });
+    }
+});
+exports.searchMessages = searchMessages;
 const sanitizeFileName = (name) => {
     const normalized = name.replace(/[^a-zA-Z0-9._ -]/g, '').trim();
     if (!normalized) {

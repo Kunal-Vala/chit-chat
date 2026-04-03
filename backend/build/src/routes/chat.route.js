@@ -4,6 +4,7 @@ exports.router = void 0;
 const express_1 = require("express");
 const auth_middleware_1 = require("../middleware/auth.middleware");
 const upload_middleware_1 = require("../middleware/upload.middleware");
+const rateLimit_middleware_1 = require("../middleware/rateLimit.middleware");
 const chat_controller_1 = require("../controllers/chat.controller");
 exports.router = (0, express_1.Router)();
 // All routes require authentication
@@ -265,7 +266,7 @@ exports.router.get('/conversations/:conversationId/messages', chat_controller_1.
  *       413:
  *         description: File too large
  */
-exports.router.post('/messages/:conversationId/upload-image', upload_middleware_1.handleChatImageUpload, chat_controller_1.uploadConversationImage);
+exports.router.post('/messages/:conversationId/upload-image', rateLimit_middleware_1.uploadLimiter, upload_middleware_1.handleChatImageUpload, chat_controller_1.uploadConversationImage);
 /**
  * @swagger
  * /api/chat/messages/{messageId}:
@@ -311,7 +312,7 @@ exports.router.post('/messages/:conversationId/upload-image', upload_middleware_
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-exports.router.delete('/messages/:messageId', chat_controller_1.deleteMessage);
+exports.router.delete('/messages/:messageId', rateLimit_middleware_1.messageLimiter, chat_controller_1.deleteMessage);
 /**
  * @swagger
  * /api/chat/messages/{messageId}:
@@ -366,5 +367,70 @@ exports.router.delete('/messages/:messageId', chat_controller_1.deleteMessage);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-exports.router.put('/messages/:messageId', chat_controller_1.editMessage);
+exports.router.put('/messages/:messageId', rateLimit_middleware_1.messageLimiter, chat_controller_1.editMessage);
+/**
+ * @swagger
+ * /api/chat/search:
+ *   get:
+ *     summary: Search messages across conversations
+ *     tags: [Chat]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query
+ *       - in: query
+ *         name: conversationId
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Optional conversation ID to limit search
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number (default 1)
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 30
+ *           maximum: 100
+ *         description: Results per page (default 30, max 100)
+ *     responses:
+ *       200:
+ *         description: Search results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Message'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *       400:
+ *         description: Bad request - missing query
+ *       401:
+ *         description: Unauthorized
+ */
+exports.router.get('/search', rateLimit_middleware_1.searchLimiter, chat_controller_1.searchMessages);
 exports.default = exports.router;

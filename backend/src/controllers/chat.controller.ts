@@ -288,6 +288,71 @@ export const markConversationAsRead = async (req: AuthenticatedRequest, res: Res
     }
 };
 
+// GET /api/chat/search - Search messages across conversations
+export const searchMessages = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+        const { q, conversationId, limit = 30, page = 1 } = req.query;
+
+        if (!q || typeof q !== 'string' || !q.trim()) {
+            return res.status(400).json({ error: 'Search query required' });
+        }
+
+        // Verify user is part of the conversation (if specified)
+        if (conversationId && typeof conversationId === 'string') {
+            const conversation = await Conversation.findOne({
+                _id: conversationId,
+                participants: userId,
+            });
+
+            if (!conversation) {
+                return res.status(401).json({ error: 'Unauthorized' });
+            }
+        }
+
+        const searchFilter: any = {
+            isDeleted: { $ne: true },
+            $text: { $search: q }
+        };
+
+        // If conversationId specified, limit to that conversation
+        if (conversationId && typeof conversationId === 'string') {
+            searchFilter.conversationId = conversationId;
+        } else {
+            // Search across all conversations the user is part of
+            const userConversations = await Conversation.find({ participants: userId });
+            searchFilter.conversationId = { $in: userConversations.map(c => c._id) };
+        }
+
+        const limitNum = Math.min(parseInt(limit as string) || 30, 100);
+        const pageNum = Math.max(parseInt(page as string) || 1, 1);
+        const skip = (pageNum - 1) * limitNum;
+
+        const results = await Message.find(searchFilter)
+            .populate('senderId', 'username profilePictureUrl')
+            .populate('conversationId', '_id')
+            .sort({ sentAt: -1 })
+            .skip(skip)
+            .limit(limitNum)
+            .lean();
+
+        const totalResults = await Message.countDocuments(searchFilter);
+
+        return res.json({
+            results,
+            pagination: {
+                page: pageNum,
+                limit: limitNum,
+                total: totalResults,
+                totalPages: Math.ceil(totalResults / limitNum)
+            }
+        });
+    } catch (error) {
+        console.error('Error searching messages:', error);
+        return res.status(500).json({ error: 'Failed to search messages' });
+    }
+};
+
 const sanitizeFileName = (name: string): string => {
     const normalized = name.replace(/[^a-zA-Z0-9._ -]/g, '').trim();
     if (!normalized) {

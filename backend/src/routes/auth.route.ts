@@ -1,6 +1,7 @@
 import Express from "express";
 import { sign_up, sign_in, logout, refresh, verify } from "../controllers/auth.controller";
 import { authenticateUser } from "../middleware/auth.middleware";
+import { authLimiter } from "../middleware/rateLimit.middleware";
 
 export const router = Express.Router();
 
@@ -58,7 +59,7 @@ export const router = Express.Router();
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/sign_up', sign_up);
+router.post('/sign_up', authLimiter, sign_up);
 
 /**
  * @swagger
@@ -109,7 +110,7 @@ router.post('/sign_up', sign_up);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/sign_in', sign_in);
+router.post('/sign_in', authLimiter, sign_in);
 
 /**
  * @swagger

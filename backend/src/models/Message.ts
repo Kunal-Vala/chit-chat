@@ -112,6 +112,9 @@ const messageSchema = new Schema<IMessage>({
 messageSchema.index({ conversationId: 1, sentAt: -1 });
 messageSchema.index({ senderId: 1 });
 
+// Text index for search functionality
+messageSchema.index({ content: 'text' });
+
 const Message: Model<IMessage> = mongoose.model<IMessage>('Message', messageSchema);
 
 export default Message;

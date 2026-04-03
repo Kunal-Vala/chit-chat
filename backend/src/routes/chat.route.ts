@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticateUser } from '../middleware/auth.middleware';
 import { handleChatImageUpload } from '../middleware/upload.middleware';
+import { messageLimiter, uploadLimiter, searchLimiter } from '../middleware/rateLimit.middleware';
 import {
     getUserConversations,
     createConversation,
@@ -9,7 +10,8 @@ import {
     deleteMessage,
     editMessage,
     markConversationAsRead,
-    uploadConversationImage
+    uploadConversationImage,
+    searchMessages
 } from '../controllers/chat.controller';
 
 export const router = Router();
@@ -279,7 +281,7 @@ router.get('/conversations/:conversationId/messages', getMessages);
  *       413:
  *         description: File too large
  */
-router.post('/messages/:conversationId/upload-image', handleChatImageUpload, uploadConversationImage);
+router.post('/messages/:conversationId/upload-image', uploadLimiter, handleChatImageUpload, uploadConversationImage);
 
 /**
  * @swagger
@@ -326,7 +328,7 @@ router.post('/messages/:conversationId/upload-image', handleChatImageUpload, upl
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.delete('/messages/:messageId', deleteMessage);
+router.delete('/messages/:messageId', messageLimiter, deleteMessage);
 
 /**
  * @swagger
@@ -382,6 +384,72 @@ router.delete('/messages/:messageId', deleteMessage);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/messages/:messageId', editMessage);
+router.put('/messages/:messageId', messageLimiter, editMessage);
+
+/**
+ * @swagger
+ * /api/chat/search:
+ *   get:
+ *     summary: Search messages across conversations
+ *     tags: [Chat]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query
+ *       - in: query
+ *         name: conversationId
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Optional conversation ID to limit search
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number (default 1)
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 30
+ *           maximum: 100
+ *         description: Results per page (default 30, max 100)
+ *     responses:
+ *       200:
+ *         description: Search results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Message'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *       400:
+ *         description: Bad request - missing query
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/search', searchLimiter, searchMessages);
 
 export default router;

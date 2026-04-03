@@ -7,6 +7,7 @@ exports.router = void 0;
 const express_1 = __importDefault(require("express"));
 const auth_controller_1 = require("../controllers/auth.controller");
 const auth_middleware_1 = require("../middleware/auth.middleware");
+const rateLimit_middleware_1 = require("../middleware/rateLimit.middleware");
 exports.router = express_1.default.Router();
 /**
  * @swagger
@@ -62,7 +63,7 @@ exports.router = express_1.default.Router();
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-exports.router.post('/sign_up', auth_controller_1.sign_up);
+exports.router.post('/sign_up', rateLimit_middleware_1.authLimiter, auth_controller_1.sign_up);
 /**
  * @swagger
  * /api/auth/sign_in:
@@ -112,7 +113,7 @@ exports.router.post('/sign_up', auth_controller_1.sign_up);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-exports.router.post('/sign_in', auth_controller_1.sign_in);
+exports.router.post('/sign_in', rateLimit_middleware_1.authLimiter, auth_controller_1.sign_in);
 /**
  * @swagger
  * /api/auth/logout:

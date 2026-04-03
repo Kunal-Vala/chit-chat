@@ -813,6 +813,16 @@ function Chat() {
             </div>
 
             <div className="px-6 py-4 shrink-0">
+              {typingUsers.length > 0 && (
+                <div className="mb-3 px-3 py-2 text-sm text-[color:var(--app-muted)] italic flex items-center gap-2">
+                  <span>{typingUsers.map((u) => u.username).join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing</span>
+                  <div className="flex gap-1">
+                    <div className="w-1.5 h-1.5 bg-[color:var(--app-muted)] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-1.5 h-1.5 bg-[color:var(--app-muted)] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-1.5 h-1.5 bg-[color:var(--app-muted)] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              )}
               <div className="relative rounded-2xl border app-border app-card-inner px-4 py-3 focus-within:ring-2 focus-within:ring-[color:var(--app-ring)] transition">
                 {selectedImageFile && selectedImagePreview && (
                   <div className="mb-3 rounded-xl border app-border p-2 flex items-center gap-3">

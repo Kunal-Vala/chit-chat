@@ -124,5 +124,7 @@ const messageSchema = new mongoose_1.Schema({
 // Index for faster queries
 messageSchema.index({ conversationId: 1, sentAt: -1 });
 messageSchema.index({ senderId: 1 });
+// Text index for search functionality
+messageSchema.index({ content: 'text' });
 const Message = mongoose_1.default.model('Message', messageSchema);
 exports.default = Message;
