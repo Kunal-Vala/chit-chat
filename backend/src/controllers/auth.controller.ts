@@ -127,9 +127,13 @@ export const logout = async (req: AuthenticatedRequest, res: Response): Promise<
             return res.status(401).json({ error: 'Unauthorized' });
         }
 
-        // Increment tokenVersion to invalidate all existing tokens
+        // Increment tokenVersion to invalidate all existing tokens and mark offline.
         await User.findByIdAndUpdate(req.user.userId, {
-            $inc: { tokenVersion: 1 }
+            $inc: { tokenVersion: 1 },
+            $set: {
+                onlineStatus: false,
+                lastSeen: new Date()
+            }
         });
 
         return res.status(200).json({ 

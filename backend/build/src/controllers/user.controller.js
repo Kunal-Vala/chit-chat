@@ -14,9 +14,26 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkFriendshipStatus = exports.getFriendRequests = exports.getFriendsList = exports.deleteFriend = exports.rejectFriendRequest = exports.acceptFriendRequest = exports.sendFriendRequest = exports.updateUserProfile = exports.searchUsersByUsername = exports.deleteProfilePicture = exports.uploadProfilePicture = exports.getUserById = void 0;
 const User_1 = __importDefault(require("../models/User"));
+const Conversation_1 = __importDefault(require("../models/Conversation"));
 const zod_1 = require("zod");
 const validationSchema_1 = require("../lib/validationSchema");
 const cloudinary_1 = require("../lib/cloudinary");
+const ensureDirectConversation = (userAId, userBId) => __awaiter(void 0, void 0, void 0, function* () {
+    if (userAId === userBId) {
+        return;
+    }
+    const existingConversation = yield Conversation_1.default.findOne({
+        conversationType: 'direct',
+        participants: { $all: [userAId, userBId] }
+    }).select('_id');
+    if (existingConversation) {
+        return;
+    }
+    yield Conversation_1.default.create({
+        participants: [userAId, userBId],
+        conversationType: 'direct'
+    });
+});
 const getUserById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = req.params.userid;
@@ -131,22 +148,29 @@ const deleteProfilePicture = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.deleteProfilePicture = deleteProfilePicture;
 const searchUsersByUsername = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const { q } = req.query;
+        const currentUserId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
         if (!q || typeof q !== 'string' || q.trim() === '') {
             return res.status(400).json({ error: 'Search query is required' });
+        }
+        if (!currentUserId) {
+            return res.status(401).json({ error: 'Unauthorized' });
         }
         const limit = Math.min(parseInt(req.query.limit) || 10, 50);
         const skip = Math.max(parseInt(req.query.skip) || 0, 0);
         const users = yield User_1.default.find({
-            username: { $regex: q.trim(), $options: 'i' }
+            username: { $regex: q.trim(), $options: 'i' },
+            _id: { $ne: currentUserId }
         })
             .select('-password -tokenVersion -email')
             .limit(limit)
             .skip(skip)
             .lean();
         const total = yield User_1.default.countDocuments({
-            username: { $regex: q.trim(), $options: 'i' }
+            username: { $regex: q.trim(), $options: 'i' },
+            _id: { $ne: currentUserId }
         });
         return res.status(200).json({
             users,
@@ -304,6 +328,7 @@ const sendFriendRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
             yield User_1.default.findByIdAndUpdate(targetUserId, {
                 $push: { friends: currentUserId }
             });
+            yield ensureDirectConversation(currentUserId, targetUserId);
             return res.status(200).json({
                 message: 'Mutual friend request detected. You are now friends!',
                 status: 'friends'
@@ -368,6 +393,7 @@ const acceptFriendRequest = (req, res) => __awaiter(void 0, void 0, void 0, func
         yield User_1.default.findByIdAndUpdate(requesterId, {
             $addToSet: { friends: currentUserId }
         });
+        yield ensureDirectConversation(currentUserId, requesterId);
         return res.status(200).json({
             message: 'Friend request accepted successfully',
             user: updatedCurrentUser

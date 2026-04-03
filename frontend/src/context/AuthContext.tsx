@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import apiClient, { setStoredToken, setVolatileToken, setAuthHandlers, TOKEN_STORAGE_KEY } from '../api/axiosConfig'
 import { AxiosError } from 'axios'
 import { useNavigate } from 'react-router-dom'
+import { disconnectChatSocket } from '../socket/chatSocket'
 
 export type AuthUser = {
   userId: string
@@ -138,6 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Logs the user out locally and on the backend, then redirects to login.
   const handleLogout = useCallback(async () => {
     try { await apiClient.post('/auth/logout') } catch { /* ignore backend failures */ }
+    disconnectChatSocket()
     setStoredToken(null)
     setVolatileToken(null)
     localStorage.removeItem('user')

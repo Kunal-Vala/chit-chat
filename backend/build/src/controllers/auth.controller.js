@@ -115,9 +115,13 @@ const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         if (!req.user) {
             return res.status(401).json({ error: 'Unauthorized' });
         }
-        // Increment tokenVersion to invalidate all existing tokens
+        // Increment tokenVersion to invalidate all existing tokens and mark offline.
         yield User_1.default.findByIdAndUpdate(req.user.userId, {
-            $inc: { tokenVersion: 1 }
+            $inc: { tokenVersion: 1 },
+            $set: {
+                onlineStatus: false,
+                lastSeen: new Date()
+            }
         });
         return res.status(200).json({
             message: 'Logged out successfully'

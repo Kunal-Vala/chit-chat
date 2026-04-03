@@ -2,9 +2,11 @@ import type { UserProfile } from "../types";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { searchUsers, sendFriendRequest } from "../api/userApi";
+import { useAuth } from "../context/AuthContext";
 
 function SearchUsers() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [query, setQuery] = useState<string>("");
@@ -24,7 +26,7 @@ function SearchUsers() {
         try {
           setLoading(true);
           const data = await searchUsers(query, 20);
-          setResults(data.users);
+          setResults(data.users.filter((candidate) => candidate._id !== user?.userId));
         } catch (err) {
           setError(err instanceof Error ? err.message : "Search failed");
         } finally {
@@ -36,7 +38,7 @@ function SearchUsers() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, user?.userId]);
 
 
   const handleAddFriend = async (userId : string) => {
@@ -83,7 +85,7 @@ function SearchUsers() {
               <div key={user._id} className="app-card-inner p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div
                   className="flex items-center gap-4 cursor-pointer flex-1"
-                  onClick={() => navigate(`/users/${user._id}`)}
+                  onClick={() => navigate(`/user/${user._id}`)}
                 >
                   {user.profilePictureUrl ? (
                     <img src={user.profilePictureUrl} alt={user.username} className="app-avatar-img lg" />
@@ -94,7 +96,6 @@ function SearchUsers() {
                   )}
                   <div>
                     <h3 className="text-lg font-semibold">{user.username}</h3>
-                    <p className="app-muted text-sm">{user.email}</p>
                     {user.statusText && <p className="app-muted text-sm italic">{user.statusText}</p>}
                   </div>
                 </div>

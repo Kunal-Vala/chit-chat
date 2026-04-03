@@ -64,6 +64,9 @@ function FriendsManager() {
                 return fromId !== fromUserId
             }))
 
+            const refreshedFriends = await getFriendsList()
+            setFriends(refreshedFriends)
+
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to accept friend request")
         }
@@ -139,6 +142,9 @@ function FriendsManager() {
                                         )}
                                         <div>
                                             <h3 className="text-lg font-semibold">{friend.username}</h3>
+                                            <p className={`text-xs ${friend.onlineStatus ? 'text-green-600' : 'app-muted'}`}>
+                                                {friend.onlineStatus ? 'Online' : 'Offline'}
+                                            </p>
                                             {friend.statusText && <p className="text-sm app-muted">{friend.statusText}</p>}
                                         </div>
                                     </div>

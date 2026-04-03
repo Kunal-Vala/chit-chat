@@ -11,6 +11,49 @@ export const getUserConversations = async (req: AuthenticatedRequest, res: Respo
     try {
         const userId = req.user?.userId;
 
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const currentUser = await User.findById(userId).select('friends');
+
+        if (currentUser?.friends?.length) {
+            const directConversations = await Conversation.find({
+                conversationType: 'direct',
+                participants: userId,
+            }).select('participants');
+
+            const connectedFriendIds = new Set<string>();
+            directConversations.forEach((directConversation) => {
+                directConversation.participants.forEach((participantId) => {
+                    const participant = participantId.toString();
+                    if (participant !== userId) {
+                        connectedFriendIds.add(participant);
+                    }
+                });
+            });
+
+            const missingFriendIds = currentUser.friends
+                .map((friendId) => friendId.toString())
+                .filter((friendId) => !connectedFriendIds.has(friendId));
+
+            await Promise.all(
+                missingFriendIds.map(async (friendId) => {
+                    const existingConversation = await Conversation.findOne({
+                        conversationType: 'direct',
+                        participants: { $all: [userId, friendId] }
+                    }).select('_id');
+
+                    if (!existingConversation) {
+                        await Conversation.create({
+                            participants: [userId, friendId],
+                            conversationType: 'direct'
+                        });
+                    }
+                })
+            );
+        }
+
         const conversation = await Conversation.find({
             participants: userId,
         })
@@ -21,10 +64,10 @@ export const getUserConversations = async (req: AuthenticatedRequest, res: Respo
             })
             .sort({ updatedAt: -1 });
 
-        res.json({ conversation });
+        return res.json({ conversation });
     } catch (error) {
         console.error('Error Fetching Conversation', error);
-        res.status(500).json({ error: 'Failed to fetch conversation' });
+        return res.status(500).json({ error: 'Failed to fetch conversation' });
     }
 };
 

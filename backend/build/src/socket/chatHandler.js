@@ -19,10 +19,12 @@ const Conversation_1 = __importDefault(require("../models/Conversation"));
 const Group_1 = __importDefault(require("../models/Group"));
 const User_1 = __importDefault(require("../models/User"));
 const env_1 = require("../config/env");
-// Store online users: userId -> socketId
+// Store online users: userId -> set of socketIds (supports multi-tab sessions)
 const onlineUsers = new Map();
 const getOnlineUsers = () => {
-    return Array.from(onlineUsers.keys());
+    return Array.from(onlineUsers.entries())
+        .filter(([, socketIds]) => socketIds.size > 0)
+        .map(([id]) => id);
 };
 exports.getOnlineUsers = getOnlineUsers;
 const setupChatHandlers = (io) => {
@@ -43,17 +45,22 @@ const setupChatHandlers = (io) => {
         }
     });
     io.on('connection', (socket) => {
+        var _a;
         const userId = socket.data.userId;
         const username = socket.data.username;
-        // store online user
-        onlineUsers.set(userId, socket.id);
-        // update user online status in db
-        User_1.default.findByIdAndUpdate(userId, {
-            onlineStatus: true,
-            lastSeen: new Date(),
-        }).catch(console.error);
-        // Broadcast online status to friends
-        socket.broadcast.emit('user-online', { userId });
+        // Store socket for this user and detect first active connection.
+        const userSocketIds = (_a = onlineUsers.get(userId)) !== null && _a !== void 0 ? _a : new Set();
+        const wasOffline = userSocketIds.size === 0;
+        userSocketIds.add(socket.id);
+        onlineUsers.set(userId, userSocketIds);
+        if (wasOffline) {
+            // Update online status once when the user comes online.
+            User_1.default.findByIdAndUpdate(userId, {
+                onlineStatus: true,
+                lastSeen: new Date(),
+            }).catch(console.error);
+            socket.broadcast.emit('user-online', { userId });
+        }
         console.log(`User ${username} connected`);
         // Join Conversation Room
         socket.on('join-conversation', (conversationId) => __awaiter(void 0, void 0, void 0, function* () {
@@ -95,8 +102,8 @@ const setupChatHandlers = (io) => {
                     // mark as delivered for online users
                     const otherParticipants = conversation.participants.filter(p => p.toString() !== userId);
                     otherParticipants.forEach(participateId => {
-                        const recipientSocketId = onlineUsers.get(participateId.toString());
-                        if (recipientSocketId) {
+                        const recipientSocketIds = onlineUsers.get(participateId.toString());
+                        if (recipientSocketIds && recipientSocketIds.size > 0) {
                             // update delivery status
                             Message_1.default.findByIdAndUpdate(message._id, {
                                 deliveryStatus: 'delivered',
@@ -121,9 +128,9 @@ const setupChatHandlers = (io) => {
                 }, { new: true });
                 if (message) {
                     // Notify sender
-                    const senderSocketId = onlineUsers.get(message.senderId.toString());
-                    if (senderSocketId) {
-                        io.to(senderSocketId).emit('message-status-updated', {
+                    const senderSocketIds = onlineUsers.get(message.senderId.toString());
+                    if (senderSocketIds && senderSocketIds.size > 0) {
+                        io.to(Array.from(senderSocketIds)).emit('message-status-updated', {
                             messageId,
                             status: 'delivered'
                         });
@@ -144,9 +151,9 @@ const setupChatHandlers = (io) => {
                 }, { new: true });
                 if (message) {
                     // Notify sender
-                    const senderSocketId = onlineUsers.get(message.senderId.toString());
-                    if (senderSocketId) {
-                        io.to(senderSocketId).emit('message-status-updated', {
+                    const senderSocketIds = onlineUsers.get(message.senderId.toString());
+                    if (senderSocketIds && senderSocketIds.size > 0) {
+                        io.to(Array.from(senderSocketIds)).emit('message-status-updated', {
                             messageId,
                             status: 'read'
                         });
@@ -300,9 +307,9 @@ const setupChatHandlers = (io) => {
                     removedBy: userId
                 });
                 // Notify the removed member specifically
-                const removedMemberSocketId = onlineUsers.get(data.memberId);
-                if (removedMemberSocketId) {
-                    io.to(removedMemberSocketId).emit('removed-from-group', {
+                const removedMemberSocketIds = onlineUsers.get(data.memberId);
+                if (removedMemberSocketIds && removedMemberSocketIds.size > 0) {
+                    io.to(Array.from(removedMemberSocketIds)).emit('removed-from-group', {
                         groupId: data.groupId
                     });
                 }
@@ -337,14 +344,22 @@ const setupChatHandlers = (io) => {
         }));
         // Handle disconnection
         socket.on('disconnect', () => __awaiter(void 0, void 0, void 0, function* () {
-            onlineUsers.delete(userId);
-            // Update user offline status
-            yield User_1.default.findByIdAndUpdate(userId, {
-                onlineStatus: false,
-                lastSeen: new Date()
-            }).catch(console.error);
-            // Broadcast offline status
-            socket.broadcast.emit('user-offline', { userId });
+            const userSocketIds = onlineUsers.get(userId);
+            if (userSocketIds) {
+                userSocketIds.delete(socket.id);
+                if (userSocketIds.size === 0) {
+                    onlineUsers.delete(userId);
+                    // Update user offline status only when the last socket disconnects.
+                    yield User_1.default.findByIdAndUpdate(userId, {
+                        onlineStatus: false,
+                        lastSeen: new Date()
+                    }).catch(console.error);
+                    socket.broadcast.emit('user-offline', { userId });
+                }
+                else {
+                    onlineUsers.set(userId, userSocketIds);
+                }
+            }
             console.log(`User ${username} disconnected`);
         }));
     });

@@ -1,11 +1,32 @@
 import { AuthenticatedRequest, IUser } from "../types";
 import { Request, Response } from "express";
 import User from "../models/User";
+import Conversation from "../models/Conversation";
 
 type FriendRequest = NonNullable<IUser['friendRequests']>[number];
 import { ZodError } from "zod";
 import { toUpdateProfileInput } from "../lib/validationSchema";
 import { uploadBufferToCloudinary, downloadAndUploadToCloudinary, extractPublicIdFromUrl, deleteFromCloudinary } from "../lib/cloudinary";
+
+const ensureDirectConversation = async (userAId: string, userBId: string): Promise<void> => {
+    if (userAId === userBId) {
+        return;
+    }
+
+    const existingConversation = await Conversation.findOne({
+        conversationType: 'direct',
+        participants: { $all: [userAId, userBId] }
+    }).select('_id');
+
+    if (existingConversation) {
+        return;
+    }
+
+    await Conversation.create({
+        participants: [userAId, userBId],
+        conversationType: 'direct'
+    });
+};
 
 export const getUserById = async (req: Request, res: Response): Promise<Response | void> => {
 
@@ -143,19 +164,25 @@ export const deleteProfilePicture = async (req: AuthenticatedRequest, res: Respo
     }
 };
 
-export const searchUsersByUsername = async (req: Request, res: Response): Promise<Response | void> => {
+export const searchUsersByUsername = async (req: AuthenticatedRequest, res: Response): Promise<Response | void> => {
     try {
         const { q } = req.query;
+        const currentUserId = req.user?.userId;
 
         if (!q || typeof q !== 'string' || q.trim() === '') {
             return res.status(400).json({ error: 'Search query is required' });
+        }
+
+        if (!currentUserId) {
+            return res.status(401).json({ error: 'Unauthorized' });
         }
 
         const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
         const skip = Math.max(parseInt(req.query.skip as string) || 0, 0);
 
         const users = await User.find({
-            username: { $regex: q.trim(), $options: 'i' }
+            username: { $regex: q.trim(), $options: 'i' },
+            _id: { $ne: currentUserId }
         })
             .select('-password -tokenVersion -email')
             .limit(limit)
@@ -163,7 +190,8 @@ export const searchUsersByUsername = async (req: Request, res: Response): Promis
             .lean();
 
         const total = await User.countDocuments({
-            username: { $regex: q.trim(), $options: 'i' }
+            username: { $regex: q.trim(), $options: 'i' },
+            _id: { $ne: currentUserId }
         });
 
         return res.status(200).json({
@@ -347,6 +375,8 @@ export const sendFriendRequest = async (req: AuthenticatedRequest, res: Response
                 $push: { friends: currentUserId }
             });
 
+            await ensureDirectConversation(currentUserId, targetUserId);
+
             return res.status(200).json({
                 message: 'Mutual friend request detected. You are now friends!',
                 status: 'friends'
@@ -434,6 +464,8 @@ export const acceptFriendRequest = async (req: AuthenticatedRequest, res: Respon
                 $addToSet: { friends: currentUserId }
             }
         );
+
+        await ensureDirectConversation(currentUserId, requesterId);
 
         return res.status(200).json({
             message: 'Friend request accepted successfully',

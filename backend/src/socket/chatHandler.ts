@@ -8,12 +8,14 @@ import User from "../models/User";
 import { JWT_SECRET } from "../config/env";
 
 
-// Store online users: userId -> socketId
-const onlineUsers = new Map<string, string>();
+// Store online users: userId -> set of socketIds (supports multi-tab sessions)
+const onlineUsers = new Map<string, Set<string>>();
 
 
 export const getOnlineUsers = () => {
-    return Array.from(onlineUsers.keys());
+    return Array.from(onlineUsers.entries())
+        .filter(([, socketIds]) => socketIds.size > 0)
+        .map(([id]) => id);
 };
 
 
@@ -45,20 +47,22 @@ export const setupChatHandlers = (io: Server) => {
         const userId = socket.data.userId;
         const username = socket.data.username;
 
-        // store online user
+        // Store socket for this user and detect first active connection.
+        const userSocketIds = onlineUsers.get(userId) ?? new Set<string>();
+        const wasOffline = userSocketIds.size === 0;
+        userSocketIds.add(socket.id);
+        onlineUsers.set(userId, userSocketIds);
 
-        onlineUsers.set(userId, socket.id);
+        if (wasOffline) {
+            // Update online status once when the user comes online.
+            User.findByIdAndUpdate(userId, {
+                onlineStatus: true,
+                lastSeen: new Date(),
+            }).catch(console.error);
 
-        // update user online status in db
-        User.findByIdAndUpdate(userId, {
-            onlineStatus: true,
-            lastSeen: new Date(),
+            socket.broadcast.emit('user-online', { userId });
+        }
 
-        }).catch(console.error);
-
-        // Broadcast online status to friends
-
-        socket.broadcast.emit('user-online', { userId });
 
         console.log(`User ${username} connected`);
 
@@ -125,8 +129,8 @@ export const setupChatHandlers = (io: Server) => {
                     );
 
                     otherParticipants.forEach(participateId => {
-                        const recipientSocketId = onlineUsers.get(participateId.toString());
-                        if (recipientSocketId) {
+                        const recipientSocketIds = onlineUsers.get(participateId.toString());
+                        if (recipientSocketIds && recipientSocketIds.size > 0) {
                             // update delivery status
                             Message.findByIdAndUpdate(message._id, {
                                 deliveryStatus: 'delivered',
@@ -159,9 +163,9 @@ export const setupChatHandlers = (io: Server) => {
 
                 if (message) {
                     // Notify sender
-                    const senderSocketId = onlineUsers.get(message.senderId.toString());
-                    if (senderSocketId) {
-                        io.to(senderSocketId).emit('message-status-updated', {
+                    const senderSocketIds = onlineUsers.get(message.senderId.toString());
+                    if (senderSocketIds && senderSocketIds.size > 0) {
+                        io.to(Array.from(senderSocketIds)).emit('message-status-updated', {
                             messageId,
                             status: 'delivered'
                         });
@@ -187,9 +191,9 @@ export const setupChatHandlers = (io: Server) => {
 
                 if (message) {
                     // Notify sender
-                    const senderSocketId = onlineUsers.get(message.senderId.toString());
-                    if (senderSocketId) {
-                        io.to(senderSocketId).emit('message-status-updated', {
+                    const senderSocketIds = onlineUsers.get(message.senderId.toString());
+                    if (senderSocketIds && senderSocketIds.size > 0) {
+                        io.to(Array.from(senderSocketIds)).emit('message-status-updated', {
                             messageId,
                             status: 'read'
                         });
@@ -374,9 +378,9 @@ export const setupChatHandlers = (io: Server) => {
                 });
 
                 // Notify the removed member specifically
-                const removedMemberSocketId = onlineUsers.get(data.memberId);
-                if (removedMemberSocketId) {
-                    io.to(removedMemberSocketId).emit('removed-from-group', {
+                const removedMemberSocketIds = onlineUsers.get(data.memberId);
+                if (removedMemberSocketIds && removedMemberSocketIds.size > 0) {
+                    io.to(Array.from(removedMemberSocketIds)).emit('removed-from-group', {
                         groupId: data.groupId
                     });
                 }
@@ -419,16 +423,24 @@ export const setupChatHandlers = (io: Server) => {
 
         // Handle disconnection
         socket.on('disconnect', async () => {
-            onlineUsers.delete(userId);
+            const userSocketIds = onlineUsers.get(userId);
+            if (userSocketIds) {
+                userSocketIds.delete(socket.id);
 
-            // Update user offline status
-            await User.findByIdAndUpdate(userId, {
-                onlineStatus: false,
-                lastSeen: new Date()
-            }).catch(console.error);
+                if (userSocketIds.size === 0) {
+                    onlineUsers.delete(userId);
 
-            // Broadcast offline status
-            socket.broadcast.emit('user-offline', { userId });
+                    // Update user offline status only when the last socket disconnects.
+                    await User.findByIdAndUpdate(userId, {
+                        onlineStatus: false,
+                        lastSeen: new Date()
+                    }).catch(console.error);
+
+                    socket.broadcast.emit('user-offline', { userId });
+                } else {
+                    onlineUsers.set(userId, userSocketIds);
+                }
+            }
 
             console.log(`User ${username} disconnected`);
         });

@@ -19,9 +19,43 @@ const User_1 = __importDefault(require("../models/User"));
 const cloudinary_1 = require("../lib/cloudinary");
 // GET api/chat/conversation - get all user's conversation
 const getUserConversations = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b;
     try {
         const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+        const currentUser = yield User_1.default.findById(userId).select('friends');
+        if ((_b = currentUser === null || currentUser === void 0 ? void 0 : currentUser.friends) === null || _b === void 0 ? void 0 : _b.length) {
+            const directConversations = yield Conversation_1.default.find({
+                conversationType: 'direct',
+                participants: userId,
+            }).select('participants');
+            const connectedFriendIds = new Set();
+            directConversations.forEach((directConversation) => {
+                directConversation.participants.forEach((participantId) => {
+                    const participant = participantId.toString();
+                    if (participant !== userId) {
+                        connectedFriendIds.add(participant);
+                    }
+                });
+            });
+            const missingFriendIds = currentUser.friends
+                .map((friendId) => friendId.toString())
+                .filter((friendId) => !connectedFriendIds.has(friendId));
+            yield Promise.all(missingFriendIds.map((friendId) => __awaiter(void 0, void 0, void 0, function* () {
+                const existingConversation = yield Conversation_1.default.findOne({
+                    conversationType: 'direct',
+                    participants: { $all: [userId, friendId] }
+                }).select('_id');
+                if (!existingConversation) {
+                    yield Conversation_1.default.create({
+                        participants: [userId, friendId],
+                        conversationType: 'direct'
+                    });
+                }
+            })));
+        }
         const conversation = yield Conversation_1.default.find({
             participants: userId,
         })
@@ -31,11 +65,11 @@ const getUserConversations = (req, res) => __awaiter(void 0, void 0, void 0, fun
             select: 'content messageType sentAt senderId'
         })
             .sort({ updatedAt: -1 });
-        res.json({ conversation });
+        return res.json({ conversation });
     }
     catch (error) {
         console.error('Error Fetching Conversation', error);
-        res.status(500).json({ error: 'Failed to fetch conversation' });
+        return res.status(500).json({ error: 'Failed to fetch conversation' });
     }
 });
 exports.getUserConversations = getUserConversations;

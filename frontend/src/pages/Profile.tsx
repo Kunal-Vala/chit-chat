@@ -158,9 +158,6 @@ function Profile() {
                 </>
               )}
             </div>
-            <div className="mt-4 text-sm app-muted">
-              {profile.onlineStatus ? <span>Online</span> : <span>Offline</span>}
-            </div>
           </div>
 
           <div className="flex-1">

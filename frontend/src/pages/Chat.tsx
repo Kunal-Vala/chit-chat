@@ -56,6 +56,18 @@ const getParticipantId = (conversation: Conversation, currentUserId?: string) =>
   return other?._id ?? null
 }
 
+const getDirectParticipant = (conversation: Conversation, currentUserId?: string) => {
+  if (conversation.conversationType !== 'direct' || !currentUserId) return null
+  return conversation.participants.find((p) => p._id !== currentUserId) ?? null
+}
+
+const formatLastSeen = (lastSeen?: Date | string) => {
+  if (!lastSeen) return 'Offline'
+  const date = new Date(lastSeen)
+  if (Number.isNaN(date.getTime())) return 'Offline'
+  return `Last seen ${date.toLocaleString([], { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`
+}
+
 const getLastMessageSummary = (conversation: Conversation): MessageSummary | null => {
   if (typeof conversation.lastMessageId === 'string') return null
   return conversation.lastMessageId ?? null
@@ -253,6 +265,35 @@ function Chat() {
       handleNewMessage(data.message)
     }
 
+    const handleUserOnline = (data: { userId: string }) => {
+      if (!data.userId || data.userId === userIdRef.current) return
+      setConversations((prev) =>
+        prev.map((conv) => ({
+          ...conv,
+          participants: conv.participants.map((participant) =>
+            participant._id === data.userId
+              ? { ...participant, onlineStatus: true }
+              : participant
+          )
+        }))
+      )
+    }
+
+    const handleUserOffline = (data: { userId: string }) => {
+      if (!data.userId || data.userId === userIdRef.current) return
+      const now = new Date()
+      setConversations((prev) =>
+        prev.map((conv) => ({
+          ...conv,
+          participants: conv.participants.map((participant) =>
+            participant._id === data.userId
+              ? { ...participant, onlineStatus: false, lastSeen: now }
+              : participant
+          )
+        }))
+      )
+    }
+
     const handleMemberAdded = (data: { groupId: string; memberIds: string[] }) => {
       setGroupNotification(`${data.memberIds.length} member(s) added to the group`)
       setTimeout(() => setGroupNotification(null), 3000)
@@ -280,6 +321,8 @@ function Chat() {
     socket.on('new-message', handleNewMessage)
     socket.on('new-group-message', handleNewGroupMessage)
     socket.on('message-status-updated', handleStatusUpdated)
+    socket.on('user-online', handleUserOnline)
+    socket.on('user-offline', handleUserOffline)
     socket.on('user-typing', handleTyping)
     socket.on('user-stopped-typing', handleStoppedTyping)
     socket.on('member-added', handleMemberAdded)
@@ -291,6 +334,8 @@ function Chat() {
       socket.off('new-message', handleNewMessage)
       socket.off('new-group-message', handleNewGroupMessage)
       socket.off('message-status-updated', handleStatusUpdated)
+      socket.off('user-online', handleUserOnline)
+      socket.off('user-offline', handleUserOffline)
       socket.off('user-typing', handleTyping)
       socket.off('user-stopped-typing', handleStoppedTyping)
       socket.off('member-added', handleMemberAdded)
@@ -348,6 +393,11 @@ function Chat() {
   const activeConversation = useMemo(
     () => conversations.find((conv) => conv._id === activeConversationId) ?? null,
     [conversations, activeConversationId]
+  )
+
+  const activeDirectParticipant = useMemo(
+    () => (activeConversation ? getDirectParticipant(activeConversation, user?.userId) : null),
+    [activeConversation, user?.userId]
   )
 
   const filteredConversations = useMemo(() => {
@@ -521,6 +571,7 @@ function Chat() {
           {filteredConversations.map((conv) => {
             const lastMessage = getLastMessageSummary(conv)
             const isActive = conv._id === activeConversationId
+            const directParticipant = getDirectParticipant(conv, user?.userId)
             return (
             <button
               key={conv._id}
@@ -548,7 +599,12 @@ function Chat() {
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <span className="font-semibold text-[15px]">{getParticipantLabel(conv, user?.userId)}</span>
+                      <span className="font-semibold text-[15px] flex items-center gap-1.5">
+                        {getParticipantLabel(conv, user?.userId)}
+                        {conv.conversationType === 'direct' && directParticipant?.onlineStatus && (
+                          <span className="inline-block w-2 h-2 rounded-full bg-green-500" aria-label="Online" />
+                        )}
+                      </span>
                       <div className="flex items-center gap-2">
                         {unreadCounts[conv._id] > 0 && (
                           <span className="app-pill min-w-[20px] h-5 px-1.5 justify-center">
@@ -618,7 +674,11 @@ function Chat() {
                     <p className="text-xs app-muted">{activeConversation.participants.length} members</p>
                   ) : typingUsers.length > 0 ? (
                     <p className="text-xs text-blue-500">typing...</p>
-                  ) : null}
+                  ) : activeDirectParticipant?.onlineStatus ? (
+                    <p className="text-xs text-green-600">Online</p>
+                  ) : (
+                    <p className="text-xs app-muted">{formatLastSeen(activeDirectParticipant?.lastSeen)}</p>
+                  )}
                 </div>
               </button>
               <div className="flex items-center gap-2">
@@ -633,7 +693,7 @@ function Chat() {
                 )}
                 {activeConversation.conversationType === 'direct' && (
                   <div className="hidden md:flex items-center gap-2 text-xs">
-                    <span className="app-pill">Online</span>
+                    <span className="app-pill">{activeDirectParticipant?.onlineStatus ? 'Online' : 'Offline'}</span>
                   </div>
                 )}
               </div>
