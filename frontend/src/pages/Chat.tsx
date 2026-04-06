@@ -4,7 +4,7 @@ import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react'
 import { Users, Info, ImagePlus, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { connectChatSocket, disconnectChatSocket } from '../socket/chatSocket'
-import { deleteMessage, getMessages, getUserConversations, markConversationAsRead, uploadConversationImage } from '../api/chatApi'
+import { deleteMessage, getMessages, getUserConversations, markConversationAsRead, searchMessages as searchMessagesApi, uploadConversationImage } from '../api/chatApi'
 import { CreateGroupModal } from '../components/CreateGroupModal'
 import { GroupInfo } from '../components/GroupInfo'
 import type { ChatMessage, Conversation, MessageSummary } from '../types'
@@ -101,6 +101,9 @@ function Chat() {
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null)
   const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const [messageSearchQuery, setMessageSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<ChatMessage[]>([])
+  const [isSearchingMessages, setIsSearchingMessages] = useState(false)
 
   const activeConversationRef = useRef<string | null>(null)
   const userIdRef = useRef<string | null>(user?.userId ?? null)
@@ -171,6 +174,35 @@ function Chat() {
     if (!isPageVisible) return
     scrollToBottom('auto')
   }, [activeConversationId, loadingMessages, isPageVisible])
+
+  useEffect(() => {
+    setMessageSearchQuery('')
+    setSearchResults([])
+  }, [activeConversationId])
+
+  useEffect(() => {
+    const query = messageSearchQuery.trim()
+
+    if (!query || !activeConversationId || !token) {
+      setSearchResults([])
+      setIsSearchingMessages(false)
+      return
+    }
+
+    setIsSearchingMessages(true)
+    const timeout = window.setTimeout(async () => {
+      try {
+        const response = await searchMessagesApi(query, activeConversationId, 1, 50)
+        setSearchResults(response.results)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to search messages')
+      } finally {
+        setIsSearchingMessages(false)
+      }
+    }, 300)
+
+    return () => window.clearTimeout(timeout)
+  }, [activeConversationId, messageSearchQuery, token])
 
   useEffect(() => {
     const loadConversations = async () => {
@@ -536,6 +568,11 @@ function Chat() {
 
   const canSendMessage = Boolean((messageInput.trim() || selectedImageFile) && activeConversationId && token && !isUploadingImage)
 
+  const displayedMessages = useMemo(() => {
+    if (!messageSearchQuery.trim()) return messages
+    return searchResults
+  }, [messageSearchQuery, messages, searchResults])
+
   const toggleMessageExpanded = (messageId: string) => {
     setExpandedMessages((prev) => {
       const next = new Set(prev)
@@ -699,6 +736,21 @@ function Chat() {
               </div>
             </header>
 
+            <div className="px-6 pt-3 shrink-0">
+              <input
+                type="text"
+                value={messageSearchQuery}
+                onChange={(e) => setMessageSearchQuery(e.target.value)}
+                placeholder="Search messages in this conversation"
+                className="w-full rounded-xl border app-border bg-transparent px-3 py-2 text-sm text-[color:var(--app-text)] placeholder:text-[color:var(--app-muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--app-ring)]"
+              />
+              {messageSearchQuery.trim() && (
+                <p className="mt-1 text-xs app-muted">
+                  {isSearchingMessages ? 'Searching...' : `${displayedMessages.length} result(s)`}
+                </p>
+              )}
+            </div>
+
             <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
               {groupNotification && (
                 <div className="mb-4 rounded-lg border app-border p-3 text-center text-sm">
@@ -707,8 +759,10 @@ function Chat() {
               )}
               {loadingMessages ? (
                 <div className="text-sm app-muted">Loading messages...</div>
+              ) : messageSearchQuery.trim() && !isSearchingMessages && displayedMessages.length === 0 ? (
+                <div className="text-sm app-muted">No matching messages found.</div>
               ) : (
-                messages.map((msg, index) => {
+                displayedMessages.map((msg, index) => {
                   const isOwn = getSenderId(msg.senderId) === user?.userId
                   const isExpanded = expandedMessages.has(msg._id)
                   const hasDisplayText = Boolean(msg.content?.trim())
@@ -716,9 +770,9 @@ function Chat() {
                   const displayContent = isLong && !isExpanded ? `${msg.content.slice(0, 300)}...` : msg.content
                   const copyValue = hasDisplayText ? msg.content : (msg.mediaUrl ?? '')
                   const isCopied = copiedMessageId === msg._id
-                  const previous = messages[index - 1]
+                  const previous = displayedMessages[index - 1]
                   const showDateDivider = !previous || !isSameDay(new Date(previous.sentAt), new Date(msg.sentAt))
-                  const showUnreadDivider = firstUnreadMessageId === msg._id
+                  const showUnreadDivider = !messageSearchQuery.trim() && firstUnreadMessageId === msg._id
                   return (
                     <div key={msg._id} className="mb-4">
                       {showDateDivider && (

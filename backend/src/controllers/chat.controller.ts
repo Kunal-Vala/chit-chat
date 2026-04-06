@@ -294,9 +294,15 @@ export const searchMessages = async (req: AuthenticatedRequest, res: Response) =
         const userId = req.user?.userId;
         const { q, conversationId, limit = 30, page = 1 } = req.query;
 
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
         if (!q || typeof q !== 'string' || !q.trim()) {
             return res.status(400).json({ error: 'Search query required' });
         }
+
+        const queryText = q.trim();
 
         // Verify user is part of the conversation (if specified)
         if (conversationId && typeof conversationId === 'string') {
@@ -310,33 +316,67 @@ export const searchMessages = async (req: AuthenticatedRequest, res: Response) =
             }
         }
 
-        const searchFilter: any = {
+        const baseFilter: Record<string, unknown> = {
             isDeleted: { $ne: true },
-            $text: { $search: q }
         };
 
         // If conversationId specified, limit to that conversation
         if (conversationId && typeof conversationId === 'string') {
-            searchFilter.conversationId = conversationId;
+            baseFilter.conversationId = conversationId;
         } else {
             // Search across all conversations the user is part of
-            const userConversations = await Conversation.find({ participants: userId });
-            searchFilter.conversationId = { $in: userConversations.map(c => c._id) };
+            const userConversations = await Conversation.find({ participants: userId }).select('_id').lean();
+            baseFilter.conversationId = { $in: userConversations.map((c) => c._id) };
         }
 
         const limitNum = Math.min(parseInt(limit as string) || 30, 100);
         const pageNum = Math.max(parseInt(page as string) || 1, 1);
         const skip = (pageNum - 1) * limitNum;
 
-        const results = await Message.find(searchFilter)
-            .populate('senderId', 'username profilePictureUrl')
-            .populate('conversationId', '_id')
-            .sort({ sentAt: -1 })
-            .skip(skip)
-            .limit(limitNum)
-            .lean();
+        let results: unknown[] = [];
+        let totalResults = 0;
 
-        const totalResults = await Message.countDocuments(searchFilter);
+        try {
+            const textFilter: Record<string, unknown> = {
+                ...baseFilter,
+                $text: { $search: queryText }
+            };
+
+            const [textResults, textCount] = await Promise.all([
+                Message.find(textFilter as never, { score: { $meta: 'textScore' } })
+                    .populate('senderId', 'username profilePictureUrl')
+                    .sort({ score: { $meta: 'textScore' }, sentAt: -1 })
+                    .skip(skip)
+                    .limit(limitNum)
+                    .lean(),
+                Message.countDocuments(textFilter as never)
+            ]);
+
+            results = textResults;
+            totalResults = textCount;
+        } catch (searchError) {
+            // Fallback for environments where text index is not ready yet.
+            const escaped = queryText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regexFilter: Record<string, unknown> = {
+                ...baseFilter,
+                content: { $regex: escaped, $options: 'i' }
+            };
+
+            const [regexResults, regexCount] = await Promise.all([
+                Message.find(regexFilter as never)
+                    .populate('senderId', 'username profilePictureUrl')
+                    .sort({ sentAt: -1 })
+                    .skip(skip)
+                    .limit(limitNum)
+                    .lean(),
+                Message.countDocuments(regexFilter as never)
+            ]);
+
+            results = regexResults;
+            totalResults = regexCount;
+
+            console.warn('Text search fallback to regex used:', searchError);
+        }
 
         return res.json({
             results,

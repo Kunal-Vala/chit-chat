@@ -261,9 +261,13 @@ const searchMessages = (req, res) => __awaiter(void 0, void 0, void 0, function*
     try {
         const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
         const { q, conversationId, limit = 30, page = 1 } = req.query;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
         if (!q || typeof q !== 'string' || !q.trim()) {
             return res.status(400).json({ error: 'Search query required' });
         }
+        const queryText = q.trim();
         // Verify user is part of the conversation (if specified)
         if (conversationId && typeof conversationId === 'string') {
             const conversation = yield Conversation_1.default.findOne({
@@ -274,30 +278,54 @@ const searchMessages = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 return res.status(401).json({ error: 'Unauthorized' });
             }
         }
-        const searchFilter = {
+        const baseFilter = {
             isDeleted: { $ne: true },
-            $text: { $search: q }
         };
         // If conversationId specified, limit to that conversation
         if (conversationId && typeof conversationId === 'string') {
-            searchFilter.conversationId = conversationId;
+            baseFilter.conversationId = conversationId;
         }
         else {
             // Search across all conversations the user is part of
-            const userConversations = yield Conversation_1.default.find({ participants: userId });
-            searchFilter.conversationId = { $in: userConversations.map(c => c._id) };
+            const userConversations = yield Conversation_1.default.find({ participants: userId }).select('_id').lean();
+            baseFilter.conversationId = { $in: userConversations.map((c) => c._id) };
         }
         const limitNum = Math.min(parseInt(limit) || 30, 100);
         const pageNum = Math.max(parseInt(page) || 1, 1);
         const skip = (pageNum - 1) * limitNum;
-        const results = yield Message_1.default.find(searchFilter)
-            .populate('senderId', 'username profilePictureUrl')
-            .populate('conversationId', '_id')
-            .sort({ sentAt: -1 })
-            .skip(skip)
-            .limit(limitNum)
-            .lean();
-        const totalResults = yield Message_1.default.countDocuments(searchFilter);
+        let results = [];
+        let totalResults = 0;
+        try {
+            const textFilter = Object.assign(Object.assign({}, baseFilter), { $text: { $search: queryText } });
+            const [textResults, textCount] = yield Promise.all([
+                Message_1.default.find(textFilter, { score: { $meta: 'textScore' } })
+                    .populate('senderId', 'username profilePictureUrl')
+                    .sort({ score: { $meta: 'textScore' }, sentAt: -1 })
+                    .skip(skip)
+                    .limit(limitNum)
+                    .lean(),
+                Message_1.default.countDocuments(textFilter)
+            ]);
+            results = textResults;
+            totalResults = textCount;
+        }
+        catch (searchError) {
+            // Fallback for environments where text index is not ready yet.
+            const escaped = queryText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regexFilter = Object.assign(Object.assign({}, baseFilter), { content: { $regex: escaped, $options: 'i' } });
+            const [regexResults, regexCount] = yield Promise.all([
+                Message_1.default.find(regexFilter)
+                    .populate('senderId', 'username profilePictureUrl')
+                    .sort({ sentAt: -1 })
+                    .skip(skip)
+                    .limit(limitNum)
+                    .lean(),
+                Message_1.default.countDocuments(regexFilter)
+            ]);
+            results = regexResults;
+            totalResults = regexCount;
+            console.warn('Text search fallback to regex used:', searchError);
+        }
         return res.json({
             results,
             pagination: {
