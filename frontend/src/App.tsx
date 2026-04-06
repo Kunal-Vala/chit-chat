@@ -25,7 +25,10 @@ function AppShell() {
         if (typeof window === 'undefined') return false
         return localStorage.getItem('rail_collapsed') === 'true'
     })
-    const [headerQuery, setHeaderQuery] = useState('')
+    const headerQuery = useMemo(() => {
+        const params = new URLSearchParams(location.search)
+        return params.get('q') ?? ''
+    }, [location.search])
 
     useEffect(() => {
         document.documentElement.dataset.theme = theme
@@ -35,11 +38,6 @@ function AppShell() {
     useEffect(() => {
         localStorage.setItem('rail_collapsed', String(isRailCollapsed))
     }, [isRailCollapsed])
-
-    useEffect(() => {
-        const params = new URLSearchParams(location.search)
-        setHeaderQuery(params.get('q') ?? '')
-    }, [location.pathname, location.search])
 
     const navItems = useMemo(() => ([
         { to: '/chat', label: 'Chat', icon: MessageCircle },
@@ -51,7 +49,6 @@ function AppShell() {
     const handleToggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))
     const handleToggleRail = () => setIsRailCollapsed((prev) => !prev)
     const handleHeaderSearchChange = (value: string) => {
-        setHeaderQuery(value)
         if (!isAuthenticated || isAuthPage) return
         if (isChatPage) {
             const params = new URLSearchParams(location.search)
@@ -81,7 +78,6 @@ function AppShell() {
                                 </div>
                                 <div>
                                     <div className="text-sm font-semibold">Chit Chat</div>
-                                    <div className="text-xs app-muted">Studio Edition</div>
                                 </div>
                             </div>
                         </div>

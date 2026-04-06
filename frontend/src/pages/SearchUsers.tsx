@@ -1,7 +1,8 @@
-import type { UserProfile } from "../types";
+import type { ChatMessage, Conversation, UserProfile } from "../types";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { searchUsers, sendFriendRequest } from "../api/userApi";
+import { getUserConversations, searchMessages } from "../api/chatApi";
 import { useAuth } from "../context/AuthContext";
 
 function SearchUsers() {
@@ -12,6 +13,8 @@ function SearchUsers() {
   const [query, setQuery] = useState<string>("");
   const [searchParams, setSearchParams] = useSearchParams();
   const [results, setResults] = useState<UserProfile[]>([]);
+  const [messageResults, setMessageResults] = useState<ChatMessage[]>([])
+  const [conversations, setConversations] = useState<Conversation[]>([])
   const [requestSent, setRequestSent] = useState<Set<string>>(new Set())
 
 
@@ -21,12 +24,30 @@ function SearchUsers() {
   }, [searchParams])
 
   useEffect(() => {
+    const loadConversations = async () => {
+      try {
+        const data = await getUserConversations()
+        setConversations(data)
+      } catch {
+        // Non-blocking: users and messages can still be searched without labels.
+      }
+    }
+
+    void loadConversations()
+  }, [])
+
+  useEffect(() => {
     const timer = setTimeout(async () => {
       if (query.trim()) {
         try {
           setLoading(true);
-          const data = await searchUsers(query, 20);
-          setResults(data.users.filter((candidate) => candidate._id !== user?.userId));
+          const [userData, messageData] = await Promise.all([
+            searchUsers(query, 20),
+            searchMessages(query, undefined, 1, 20)
+          ])
+
+          setResults(userData.users.filter((candidate) => candidate._id !== user?.userId));
+          setMessageResults(messageData.results)
         } catch (err) {
           setError(err instanceof Error ? err.message : "Search failed");
         } finally {
@@ -34,11 +55,30 @@ function SearchUsers() {
         }
       } else {
         setResults([])
+        setMessageResults([])
       }
     }, 500);
 
     return () => clearTimeout(timer);
   }, [query, user?.userId]);
+
+  const getConversationId = (message: ChatMessage): string => {
+    if (typeof message.conversationId === 'string') return message.conversationId
+    const maybeConversation = message.conversationId as unknown as { _id?: string }
+    return maybeConversation?._id ?? ''
+  }
+
+  const getConversationLabel = (conversationId: string): string => {
+    const conversation = conversations.find((item) => item._id === conversationId)
+    if (!conversation) return 'Conversation'
+
+    if (conversation.conversationType === 'group') {
+      return conversation.groupName || 'Group Chat'
+    }
+
+    const participant = conversation.participants.find((candidate) => candidate._id !== user?.userId)
+    return participant?.username || 'Direct Chat'
+  }
 
 
   const handleAddFriend = async (userId : string) => {
@@ -80,6 +120,33 @@ function SearchUsers() {
         {loading && <div className="mb-4 p-4 text-center py-8 app-card-inner">Searching...</div>}
 
         <div className="grid gap-4">
+          {query && !loading && messageResults.length > 0 && (
+            <div className="app-card-inner p-4">
+              <h2 className="text-sm font-semibold mb-3">Matching Messages</h2>
+              <div className="space-y-3">
+                {messageResults.map((message) => {
+                  const senderName = typeof message.senderId === 'string' ? 'Unknown' : message.senderId.username
+                  const conversationId = getConversationId(message)
+                  return (
+                    <button
+                      key={message._id}
+                      className="w-full text-left rounded-lg border app-border px-3 py-2 hover:bg-[color:var(--app-surface-elev)] transition"
+                      onClick={() => {
+                        if (!conversationId) return
+                        navigate(`/chat?conversationId=${encodeURIComponent(conversationId)}`)
+                      }}
+                    >
+                      <p className="text-xs app-muted mb-1">
+                        {getConversationLabel(conversationId)} · {senderName}
+                      </p>
+                      <p className="text-sm line-clamp-2">{message.content || '(No text content)'}</p>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {results.length > 0 ? (
             results.map(user => (
               <div key={user._id} className="app-card-inner p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -113,7 +180,9 @@ function SearchUsers() {
               </div>
             ))
           ): query && !loading ? (
-            <div className="text-center py-8 app-muted">No users found</div>
+            <div className="text-center py-8 app-muted">
+              {messageResults.length > 0 ? 'No users found, but matching messages are shown above.' : 'No users or messages found'}
+            </div>
           ) : null}
         </div>
       </div>
