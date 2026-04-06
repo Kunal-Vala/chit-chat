@@ -12,6 +12,9 @@ export interface UploadConversationImageResponse {
 
 const extractErrorMessage = (error: unknown): string | undefined => {
   if (error instanceof AxiosError) {
+    if (error.code === 'ECONNABORTED' || (typeof error.message === 'string' && error.message.toLowerCase().includes('timeout'))) {
+      return 'Upload timed out. Please try again.'
+    }
     const data = error.response?.data
     if (data?.error) return data.error
     if (data?.message) return data.message
@@ -91,7 +94,14 @@ export const uploadConversationImage = async (conversationId: string, file: File
   try {
     const formData = new FormData()
     formData.append('file', file)
-    const response = await apiClient.post<UploadConversationImageResponse>(`/chat/messages/${conversationId}/upload-image`, formData)
+    const response = await apiClient.post<UploadConversationImageResponse>(
+      `/chat/messages/${conversationId}/upload-image`,
+      formData,
+      {
+        // Render cold starts + Cloudinary upload can exceed the default 10s.
+        timeout: 60_000,
+      }
+    )
     return response.data
   } catch (error) {
     throw new Error(extractErrorMessage(error) ?? 'Failed to upload image')
