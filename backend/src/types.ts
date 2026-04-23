@@ -95,3 +95,25 @@ export interface IGroup {
   createdAt?: Date;
   updatedAt?: Date;
 }
+
+export interface ISecretConversation {
+  _id: string;
+  participants: string[];
+  lastMessageId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface ISecretMessage {
+  _id: string;
+  conversationId: Types.ObjectId;
+  senderId: Types.ObjectId;
+  content: string; // Base64 Ciphertext
+  iv: string; // Initialization Vector for AES
+  messageType: 'text';
+  deliveryStatus: 'sent' | 'delivered' | 'read';
+  sentAt: Date;
+  deliveredAt?: Date;
+  readAt?: Date;
+  expiresAt?: Date; // TTL Index
+}
