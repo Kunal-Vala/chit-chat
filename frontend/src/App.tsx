@@ -70,7 +70,7 @@ function AppShell() {
             <div className="app-ambient" aria-hidden="true" />
             <div className="relative z-10 flex min-h-screen">
                 {isAuthenticated && !isAuthPage && !isRailCollapsed ? (
-                    <aside className="app-rail hidden lg:flex">
+                    <aside className="app-rail hidden lg:flex flex-col">
                         <div className="p-5 border-b app-border">
                             <div className="flex items-center gap-3">
                                 <div className="app-logo">
@@ -97,7 +97,7 @@ function AppShell() {
                             })}
                         </nav>
                         <div className="p-4 border-t app-border">
-                            <div className="flex items-center gap-3 mb-4">
+                            <div className="flex items-center gap-3">
                                 <div className="app-avatar">
                                     {user?.username?.charAt(0).toUpperCase() ?? 'U'}
                                 </div>
@@ -106,10 +106,6 @@ function AppShell() {
                                     <div className="text-xs app-muted">Online</div>
                                 </div>
                             </div>
-                            <button onClick={logout} className="app-ghost-button w-full">
-                                <LogOut className="h-4 w-4" />
-                                <span>Logout</span>
-                            </button>
                         </div>
                     </aside>
                 ) : null}

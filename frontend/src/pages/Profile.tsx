@@ -6,7 +6,7 @@ import type { UserProfile } from '../types'
 
 function Profile() {
   const { userId } = useParams<{ userId: string }>()
-  const { user: currentUser } = useAuth()
+  const { user: currentUser, logout } = useAuth()
   const navigate = useNavigate()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -226,9 +226,15 @@ function Profile() {
         </div>
 
         <div className="mt-8">
-          <button onClick={() => navigate(-1)} className="app-link">
-            Back
-          </button>
+          {isOwnProfile ? (
+            <button onClick={logout} className="app-danger-button px-6">
+              Logout
+            </button>
+          ) : (
+            <button onClick={() => navigate(-1)} className="app-link">
+              Back
+            </button>
+          )}
         </div>
       </div>
     </div>
