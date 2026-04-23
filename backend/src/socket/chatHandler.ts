@@ -9,7 +9,7 @@ import { JWT_SECRET } from "../config/env";
 
 
 // Store online users: userId -> set of socketIds (supports multi-tab sessions)
-const onlineUsers = new Map<string, Set<string>>();
+export const onlineUsers = new Map<string, Set<string>>();
 
 
 export const getOnlineUsers = () => {

@@ -9,6 +9,7 @@ import { FRONTEND } from './src/config/env';
 import { createServer } from 'http';
 import { Server } from "socket.io";
 import { setupChatHandlers } from './src/socket/chatHandler';
+import { setupSecretChatHandlers } from './src/socket/secretChatHandler';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './src/swagger';
 import { Request,Response } from 'express';
@@ -50,8 +51,10 @@ app.use('/api/groups', GroupRouter);
 
 // Socket.io Connection Handling
 setupChatHandlers(io);
+setupSecretChatHandlers(io);
 
 // Start server
+
 const PORT = process.env.PORT || 5000;
 
 connectDB().then(() => {
