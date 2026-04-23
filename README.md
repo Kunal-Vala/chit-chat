@@ -1,24 +1,23 @@
-# Chit-Chat: Real-Time Messaging Application
+# Chit-Chat 💬: Real-Time Messaging Application
 
-A full-stack real-time messaging platform with user authentication, direct chats, group messaging, and media sharing capabilities.
+A full-stack, hyper-minimalist real-time messaging platform prioritizing seamless user experience, direct chats, group messaging, and hyper-secure, end-to-end encrypted (E2EE) secret conversations.
 
-## � Live Demo
+## 🌐 Live Demo
 
-🌐 **Frontend:** https://chit-chat-1iab.vercel.app/  
+🔗 **Frontend:** https://chit-chat-1iab.vercel.app/  
 🔌 **Backend API:** https://chit-chat-lu1k.onrender.com  
 
 **Try it now:** [Open Chit-Chat](https://chit-chat-1iab.vercel.app/)
 
 ---
 
-## �📋 Table of Contents
+## 📋 Table of Contents
 
 - [Overview](#overview)
 - [Tech Stack](#tech-stack)
 - [Project Architecture](#project-architecture)
 - [Database Schema](#database-schema)
 - [API Endpoints](#api-endpoints)
-- [Socket.IO Events](#socketio-events)
 - [Workflows](#workflows)
 - [Setup & Installation](#setup--installation)
 - [Running Locally](#running-locally)
@@ -29,17 +28,15 @@ A full-stack real-time messaging platform with user authentication, direct chats
 
 ## 🎯 Overview
 
-**Chit-Chat** is a real-time messaging application that allows users to:
+**Chit-Chat** is a state-of-the-art messaging application featuring a modern monochromatic UI, allowing users to:
 
-- ✅ Register and authenticate with JWT tokens
-- ✅ Create direct conversations with other users
-- ✅ Create and manage group chats
-- ✅ Send text, image, and file messages
-- ✅ Receive real-time message updates via WebSocket (Socket.IO)
-- ✅ Upload media to Cloudinary
-- ✅ Manage friend requests and relationships
-- ✅ Track online/offline status
-- ✅ Mark messages as read/delivered
+- ✅ **E2E Encrypted Secret Chats:** In-memory, ephemeral secure tunnels utilizing native browser Web Crypto API (ECDH, AES-GCM).
+- ✅ **Auto-Destructing Messages:** TTL (Time-To-Live) indexing automatically destroys secret messages 1 minute after reads.
+- ✅ **Real-Time Communication:** Instant messaging with accurate delivery/read receipts via Socket.IO.
+- ✅ Register and authenticate securely with JWT tokens.
+- ✅ Create direct conversations and rich media group chats.
+- ✅ Share images automatically optimized via Cloudinary.
+- ✅ Toggle a true-contrast Minimalist Dark/Light Mode.
 
 ---
 
@@ -50,28 +47,19 @@ A full-stack real-time messaging platform with user authentication, direct chats
 - **Language:** TypeScript
 - **Database:** MongoDB (Atlas)
 - **Real-time Communication:** Socket.IO
-- **Authentication:** JWT (JSON Web Tokens)
+- **Authentication:** JWT
 - **Media Upload:** Cloudinary
 - **Validation:** Zod
-- **Password Hashing:** Bcrypt
+- **Security:** Bcrypt (Hashing)
 
 ### Frontend
 - **Framework:** React 19 + TypeScript
+- **State/Crypto:** React Context API + Native `window.crypto.subtle` API
 - **Build Tool:** Vite
-- **Styling:** Tailwind CSS
+- **Styling:** Tailwind CSS (Monochrome Apple-style Theme)
 - **API Client:** Axios
-- **Real-time Client:** Socket.IO Client
 - **Routing:** React Router v7
-- **Forms:** React Hook Form
 - **UI Components:** Lucide React Icons
-- **Notifications:** React Toastify
-- **Emoji Picker:** emoji-picker-react
-
-### Deployment
-- **Backend:** Render.com (Node.js)
-- **Frontend:** Vercel
-- **Database:** MongoDB Atlas
-- **Media Storage:** Cloudinary
 
 ---
 
@@ -83,34 +71,26 @@ A full-stack real-time messaging platform with user authentication, direct chats
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         CHIT-CHAT APPLICATION                        │
 ├──────────────────────────────┬──────────────────────────────────────┤
-│                              │                                        │
-│        FRONTEND (Vercel)      │         BACKEND (Render)             │
-│  ┌──────────────────────┐     │    ┌──────────────────────────┐     │
-│  │  React + TypeScript  │     │    │  Node.js + Express       │     │
-│  │  ├─ Pages            │     │    │  ├─ Auth Routes         │     │
-│  │  │  ├─ Sign_In       │     │    │  │  ├─ /sign_up        │     │
-│  │  │  ├─ Register      │     │    │  │  ├─ /sign_in        │     │
-│  │  │  ├─ Chat          │     │    │  │  ├─ /logout         │     │
-│  │  │  ├─ Profile       │     │    │  │  └─ /verify         │     │
-│  │  │  ├─ FriendsManager│     │    │  ├─ Chat Routes       │     │
-│  │  │  └─ SearchUsers   │     │    │  │  ├─ GET /conv...   │     │
-│  │  │                   │     │    │  │  ├─ POST /conv...  │     │
-│  │  ├─ Components       │     │    │  │  └─ GET /messages  │     │
-│  │  │  ├─ ChatUI        │     │    │  ├─ Group Routes    │     │
-│  │  │  ├─ GroupInfo     │     │    │  │  ├─ POST /create  │     │
-│  │  │  └─ CreateGroupMod│     │    │  │  ├─ PUT /:id      │     │
-│  │  ├─ Socket.IO        │────────→ │  │  └─ DELETE /:id   │     │
-│  │  │  └─ WebSocket     │ (WS)│    │  └─ Socket Handlers   │     │
-│  │  └─ API Config       │────────→ │     ├─ chatHandler    │     │
-│  │     └─ Axios         │ (REST)   │     └─ Room Events   │     │
-│  └──────────────────────┘     │    └──────────────────────────────┘
-│                              │           ↓            ↓
+│                              │                                      │
+│        FRONTEND (Vercel)     │         BACKEND (Render)             │
+│  ┌──────────────────────┐    │    ┌──────────────────────────┐      │
+│  │  React + TypeScript  │    │    │  Node.js + Express       │      │
+│  │  ├─ Context          │    │    │  ├─ Auth Routes          │      │
+│  │  │  └─ SecretChatCtx │    │    │  ├─ Chat Routes          │      │
+│  │  ├─ Pages / UI       │    │    │  ├─ Group Routes         │      │
+│  │  │  ├─ Chat          │    │    │  └─ Socket Handlers      │      │
+│  │  │  ├─ SecretChatUI  │    │    │     ├─ chatHandler       │      │
+│  │  │  └─ Profile       │    │    │     └─ secretChatHandler │      │
+│  │  ├─ Socket.IO        │───→│    └──────────────────────────┘      │
+│  │  │  └─ WebSocket     │(WS)│           ↓            ↓             │
+│  │  └─ API Config       │───→│           │            │             │
+│  └──────────────────────┘    │           │            │             │
 └──────────────────────────────┼───────────┤────────────┤─────────────┘
                                │           │            │
                        ┌───────▼───┐  ┌────▼──┐  ┌────▼──────┐
-                       │  MongoDB  │  │Cloudinary│  │JWT Secret │
-                       │  Database │  │  Media  │  │Config    │
-                       └───────────┘  └─────────┘  └──────────┘
+                       │  MongoDB  │  │Cloudy │  │JWT Secret │
+                       │  Database │  │ Media │  │Config     │
+                       └───────────┘  └───────┘  └───────────┘
 ```
 
 ---
@@ -121,213 +101,99 @@ A full-stack real-time messaging platform with user authentication, direct chats
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│                      DATA MODEL RELATIONSHIPS                         │
+│                      DATA MODEL RELATIONSHIPS                        │
 ├──────────────────────────────────────────────────────────────────────┤
-│                                                                        │
-│  ┌─────────────────┐              ┌──────────────────┐              │
-│  │      USER       │              │   CONVERSATION   │              │
-│  │─────────────────│              │──────────────────│              │
-│  │ • _id           │◄─────────┐   │ • _id            │              │
-│  │ • username      │          │   │ • participants[]│◄─────┐       │
-│  │ • email         │          │   │ • conversationType      │       │
-│  │ • password      │          │   │ • groupName      │      │       │
-│  │ • profilePic    │          │   │ • groupAvatar    │      │       │
-│  │ • statusText    │          │   │ • groupMembers[]│      │       │
-│  │ • onlineStatus  │          │   │ • lastMessageId │      │       │
-│  │ • lastSeen      │          │   │ • unreadCount    │      │       │
-│  │ • friends[]     │          │   │ • createdAt      │      │       │
-│  │ • friendReq[]   │          │   │ • updatedAt      │      │       │
-│  │ • tokenVersion  │          │   │                  │      │       │
-│  └─────────────────┘          │   └──────────────────┘      │       │
-│           │                    │           │                 │       │
-│           │                    └───────────┘                 │       │
-│           │                                                  │       │
-│      (friends)                      ┌──────────────────┐     │       │
-│      (requests)                     │     MESSAGE      │     │       │
-│           │                         │──────────────────│     │       │
-│           └──────────────────────→  │ • _id            │     │       │
-│                                     │ • conversationId │◄────┘       │
-│                                     │ • senderId       │─────┐       │
-│                                     │ • content        │     │       │
-│                                     │ • messageType    │     │       │
-│                                     │ • mediaUrl       │     │       │
-│                                     │ • deliveryStatus │     └──USER │
-│                                     │ • readBy[]       │             │
-│                                     │ • reactions[]    │             │
-│                                     │ • isEdited       │             │
-│                                     │ • isDeleted      │             │
-│                                     │ • replyTo        │             │
-│                                     │ • sentAt         │             │
-│                                     │ • readAt         │             │
-│                                     └──────────────────┘             │
-│                                      (references)                     │
-│                                                                        │
-│  ┌──────────────┐                                                    │
-│  │    GROUP     │                                                    │
-│  │──────────────│                                                    │
-│  │ • _id        │                                                    │
-│  │ • name       │                                                    │
-│  │ • desc       │                                                    │
-│  │ • adminId    │──────→ USER                                       │
-│  │ • memberIds[]│──────→ USER[]                                     │
-│  │ • picture    │                                                    │
-│  │ • conv_id    │──────→ CONVERSATION                               │
-│  │ • createdAt  │                                                    │
-│  └──────────────┘                                                    │
-│                                                                        │
+│                                                                      │
+│  ┌─────────────────┐             ┌──────────────────┐                │
+│  │      USER       │◄────────┐   │   CONVERSATION   |                │
+│  │─────────────────│         │   │──────────────────│                │
+│  │ • _id           │         └───│ • participants[] │                │
+│  │ • username      │             │ • groupMembers[] │                │
+│  │ • activeStatus  │             └──────────────────┘                │
+│  └─────────────────┘                      │                          │
+│           │                               │                          │
+│           │                       ┌──────────────────┐               │
+│           │                       │     MESSAGE      │               │
+│           │                       │──────────────────│               │
+│           └──────────────────────→│ • _id            │               │
+│                                   │ • conversationId │               │
+│                                   │ • senderId       │               │
+│                                   │ • content        │               │
+│                                   └──────────────────┘               │
+│                                                                      │
+│  ┌──────────────────┐             ┌────────────────────┐             │
+│  │ SECRET_MESSAGE   │             │ SECRET_CONVERSATION|             │
+│  │──────────────────│             │────────────────────│             │
+│  │ • _id            │             │ • _id              │             │
+│  │ • conversationId │◄────────────│ • initiatorId      │             │
+│  │ • senderId       │             │ • recipientId      │             │
+│  │ • content (Encr) │             │ • status           │             │
+│  │ • iv (Base64)    │             └────────────────────┘             │
+│  │ • expiresAt (TTL)│                                                │
+│  └──────────────────┘                                                │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🔌 API Endpoints
+## 🔌 API Endpoints & Sockets
 
-### Authentication Routes (`/api/auth`)
+Detailed implementation exists for standard Chat APIs (`/api/chat`, `/api/groups`). 
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/sign_up` | ❌ | Register new user |
-| POST | `/sign_in` | ❌ | Login user |
-| POST | `/logout` | ✅ | Logout and invalidate token |
-| POST | `/refresh` | ✅ | Refresh JWT token |
-| GET | `/verify` | ✅ | Verify token validity |
-
-### Chat Routes (`/api/chat`)
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/conversations` | ✅ | Get all user conversations |
-| POST | `/conversations` | ✅ | Create new conversation |
-| GET | `/conversations/:conversationId` | ✅ | Get conversation details |
-| GET | `/conversations/:conversationId/messages` | ✅ | Get conversation messages |
-| PUT | `/conversations/:conversationId/read` | ✅ | Mark conversation as read |
-| PUT | `/messages/:messageId` | ✅ | Edit message |
-| DELETE | `/messages/:messageId` | ✅ | Delete message |
-
-### Group Routes (`/api/groups`)
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/` | ✅ | Create group |
-| GET | `/conversation/:conversationId` | ✅ | Get group by conversation |
-| GET | `/:groupId` | ✅ | Get group details |
-| PUT | `/:groupId` | ✅ | Update group (name, pic, desc) |
-| DELETE | `/:groupId` | ✅ | Delete group |
-| GET | `/:groupId/messages` | ✅ | Get group messages |
-| POST | `/:groupId/members` | ✅ | Add members to group |
-| DELETE | `/:groupId/members/:userId` | ✅ | Remove member from group |
-| POST | `/:groupId/leave` | ✅ | Leave group |
-| PUT | `/:groupId/admin` | ✅ | Transfer admin rights |
+### Ephemeral Secret Chat Events (`secretChatHandler`)
+- `secret-chat-request`: Initiates ECDH public key exchange.
+- `secret-chat-accept`: Completes exchange, establishes room.
+- `send-secret-message`: Dispatches AES-encrypted ciphertexts.
+- `secret-message-status-updated`: Marks as read, triggers DB 1-minute TTL index.
+- `secret-chat-partner-disconnected`: Triggers secure 10s auto-destruct on client drop.
 
 ---
 
 ## 🔄 Workflows
 
-### 1. User Authentication Flow
+### 1. End-To-End Encrypted Handshake (Web Crypto API)
 
 ```mermaid
 graph TD
-    A[User] -->|1. Sign Up Request| B[Frontend]
-    B -->|2. POST /sign_up| C[Backend]
-    C -->|3. Validate Input| D{Valid?}
-    D -->|No| E[Return Error]
-    E -->|Error Response| B
-    D -->|Yes| F[Hash Password - bcrypt]
-    F -->|4. Create User| G[MongoDB]
-    G -->|User Created| C
-    C -->|5. Generate JWT Token| H[JWT Sign]
-    H -->|6. Return Token| B
-    B -->|7. Store Token| I[localStorage]
-    I -->|8. Authenticated| J[Chat Page]
+    A[User A] -->|1. Generate ECDH Keys| B[Frontend A]
+    B -->|2. Emit PubKey / Request| C[Socket.IO Server]
+    C -->|3. Alert User B| D[Frontend B]
+    D -->|4. Generate ECDH Keys| D
+    D -->|5. Derive Shared AES Secret| D
+    D -->|6. Emit PubKey / Accept| C
+    C -->|7. Forward to User A| B
+    B -->|8. Derive Shared AES Secret| B
+    B -->|9. Secure AES-GCM Tunnel Opened!| B
 ```
 
-### 2. Direct Message Flow
+### 2. Standard Message Flow
 
 ```mermaid
 graph TD
-    A[User A] -->|1. Click Chat| B[Frontend A]
-    B -->|2. Load Conversation| C[Backend]
-    C -->|3. Query Messages| D[MongoDB]
-    D -->|Messages| C
-    C -->|4. Return Data| B
-    B -->|5. Display Chat| A
-    
-    A -->|6. Send Message| B
+    A[User A] -->|1. Send Message| B[Frontend A]
     B -->|Socket: send-message| E[Socket.IO]
-    E -->|Broadcast| F[Backend Handler]
-    F -->|7. Save Message| D
-    D -->|Saved| F
-    F -->|8. Emit to User B| E
+    E -->|Broadcast| F[Backend]
+    F -->|2. Save Message| D[MongoDB]
+    F -->|3. Emit | E
     E -->|message-received| G[Frontend B]
     G -->|Display| H[User B]
-```
-
-### 3. Group Chat Creation
-
-```mermaid
-graph TD
-    A[User A] -->|1. Create Group| B[Frontend]
-    B -->|2. POST /groups| C[Backend]
-    C -->|3. Create Conversation| D[MongoDB]
-    D -->|ConversationId| C
-    C -->|4. Save Group| D
-    D -->|Saved| C
-    C -->|5. Return Group| B
-    B -->|6. Navigate to Group| I[Chat Page]
-    
-    J[Invite Members] -->|Socket: member-added| K[Socket.IO]
-    K -->|Broadcast to Room| C
-    C -->|Update groupMembers| D
-    D -->|Updated| C
-    C -->|Notify Members| K
-    K -->|group-member-added| L[Users in Group]
 ```
 
 ---
 
 ## 📦 Deployment
 
-### ✅ Deployed & Live
-
-- **Frontend:** https://chit-chat-1iab.vercel.app/
-- **Backend API:** https://chit-chat-lu1k.onrender.com
-
 ### Backend: Render.com
-
-1. **Connect GitHub** to Render
-2. **Create Web Service** from `chit-chat` repo
-3. **Set Root Directory:** `backend/`
-4. **Build Command:** `npm install && npm run build`
-5. **Start Command:** `npm run start`
-6. **Add Environment Variables:**
-   - `NODE_ENV=production`
-   - `MONGO_URI=<mongodb_atlas_uri>`
-   - `JWT_SECRET=<strong_secret>`
-   - `FRONTEND=https://your-vercel-url.vercel.app`
-   - `CLOUDINARY_CLOUD_NAME=<your_cloud_name>`
-   - `CLOUDINARY_API_KEY=<your_key>`
-   - `CLOUDINARY_API_SECRET=<your_secret>`
-
-7. **Deploy** - Render auto-deploys on push
+Deployed securely using Node.js environment variables. Uses MongoDB Atlas for persistence and TTL message removal. Configured with native CORS wrapping exclusively allowing the Vercel frontend.
 
 ### Frontend: Vercel
-
-1. **Go to vercel.com** → Import Project
-2. **Select Repository** and set **Root Directory:** `frontend/`
-3. **Build Settings:**
-   - Build Command: `npm run build`
-   - Output Directory: `dist`
-4. **Environment Variables:**
-   - `VITE_API_BASE_URL=https://your-render-api.onrender.com/api`
-   - `VITE_SOCKET_URL=https://your-render-api.onrender.com`
-5. **Deploy** - Vercel auto-deploys on push
+Deployed as a Vite React Single Page Application (SPA), dynamically talking to standard HTTP servers and WebSocket endpoints simultaneously. 
 
 ---
 
 ## 🚀 Running Locally
 
 ### Backend
-
 ```bash
 cd backend
 npm install
@@ -336,7 +202,6 @@ npm run dev
 ```
 
 ### Frontend
-
 ```bash
 cd frontend
 npm install
@@ -344,102 +209,19 @@ npm run dev
 # App on http://localhost:5173
 ```
 
-### Environment Files
-
-**backend/.env.development:**
-```env
-NODE_ENV=development
-PORT=5000
-MONGO_URI=<your_mongodb_uri>
-JWT_SECRET=dev_secret_key
-FRONTEND=http://localhost:5173,http://localhost:3000
-CLOUDINARY_CLOUD_NAME=<your_cloud_name>
-CLOUDINARY_API_KEY=<your_key>
-CLOUDINARY_API_SECRET=<your_secret>
-```
-
-**frontend/.env.development:**
-```env
-VITE_API_BASE_URL=http://localhost:5000/api
-VITE_SOCKET_URL=http://localhost:5000
-```
+*(Ensure `.env.development` files map MongoDB URI, Cloudinary Secrets, and JWT constraints before running)*
 
 ---
 
-## 🧪 Testing
+## 🔐 Security Standards
 
-### Checklist
-
-- [ ] Sign up / Sign in
-- [ ] Send direct message
-- [ ] Message displays in real-time
-- [ ] Create group
-- [ ] Add members to group
-- [ ] Group message broadcasts
-- [ ] Upload image to Cloudinary
-- [ ] Edit/delete message
-- [ ] User online/offline status
-- [ ] Mark message as read
-
-See [backend/test/TESTING.md](backend/test/TESTING.md) for detailed API testing instructions.
-
----
-
-## 📁 Project Structure
-
-```
-chit-chat/
-├── backend/
-│   ├── src/
-│   │   ├── config/        # DB config, env vars
-│   │   ├── controllers/   # Business logic
-│   │   ├── middleware/    # Auth, error handling
-│   │   ├── models/        # MongoDB schemas
-│   │   ├── routes/        # API routes
-│   │   ├── socket/        # Socket.IO handlers
-│   │   ├── lib/           # Utilities
-│   │   └── types.ts       # TypeScript types
-│   ├── index.ts           # Server entry point
-│   └── package.json
-│
-├── frontend/
-│   ├── src/
-│   │   ├── api/           # Axios config
-│   │   ├── components/    # React components
-│   │   ├── context/       # React Context
-│   │   ├── pages/         # Route pages
-│   │   ├── socket/        # Socket.IO client
-│   │   └── types.ts       # TypeScript types
-│   ├── index.html
-│   ├── package.json
-│   └── vite.config.ts
-│
-└── README.md              # This file
-```
-
----
-
-## 🔐 Security
-
-- ✅ Passwords hashed with bcrypt
-- ✅ JWT authentication on protected routes
-- ✅ CORS configured for frontend domain
-- ✅ Input validation with Zod
-- ✅ Cloudinary secrets on backend only
-
----
-
-## 📚 Resources
-
-- [Express.js Docs](https://expressjs.com/)
-- [React Docs](https://react.dev/)
-- [Socket.IO Docs](https://socket.io/)
-- [MongoDB Docs](https://docs.mongodb.com/)
-- [Vite Docs](https://vite.dev/)
+- ✅ **Cryptography:** ECDH (P-256) + AES-GCM (256-bit) zero-knowledge message structures. Keys are purely ephemeral and strictly memory-resident.
+- ✅ Passwords securely hashed with `bcrypt`.
+- ✅ JWT authentication applied strict to protected data pathways.
+- ✅ Rigorous input sanitization and payload typing dynamically asserted via `Zod`.
+- ✅ Hardened socket event validations preventing injection/eavesdropping.
 
 ---
 
 **Status:** ✅ Live on Render + Vercel  
-**Frontend:** https://chit-chat-1iab.vercel.app/  
-**Backend:** https://chit-chat-lu1k.onrender.com  
-**Last Updated:** February 18, 2026
+**Last Updated:** April 23, 2026
