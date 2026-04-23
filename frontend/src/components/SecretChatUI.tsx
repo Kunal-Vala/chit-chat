@@ -45,101 +45,104 @@ export const SecretChatUI: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-full w-full bg-slate-900 text-slate-100 border-l border-slate-700 shadow-2xl relative z-50">
-            {/* Header */}
-            <header className="px-6 py-4 flex items-center justify-between border-b border-slate-700 bg-slate-800">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-full">
+        <div className="flex flex-col h-full min-h-0">
+            {/* Header matches app-panel-header */}
+            <header className="app-panel-header px-6 py-4 flex items-center gap-3 shrink-0">
+                <div className="flex items-center gap-3 flex-1">
+                    <div className="w-11 h-11 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm">
                         <Lock className="w-5 h-5" />
                     </div>
-                    <div>
-                        <h2 className="font-bold text-lg leading-tight flex items-center gap-2">
+                    <div className="flex-1 text-left">
+                        <h3 className="text-base font-semibold flex items-center gap-2">
                             Secret Chat
-                            <span className="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                                E2EE Active
-                            </span>
-                        </h2>
-                        <p className="text-sm text-slate-400">with {recipientUsername}</p>
+                            <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">E2EE</span>
+                        </h3>
+                        <p className="text-xs app-muted">Private connection with {recipientUsername}</p>
                     </div>
                 </div>
                 <button 
                     onClick={endSecretChat}
-                    className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition"
-                    title="End Secret Chat"
+                    className="app-icon-button hover:bg-red-50 hover:text-red-600"
+                    title="Close Connection"
                 >
                     <X className="w-5 h-5" />
                 </button>
             </header>
 
-            {/* Warning Banner */}
-            <div className="bg-slate-800/50 p-3 text-xs text-slate-400 flex items-start gap-3 border-b border-slate-700/50">
-                <ShieldAlert className="w-4 h-4 shrink-0 text-emerald-500 mt-0.5" />
-                <p>
-                    Messages in this chat are end-to-end encrypted. They will self-destruct 1 minute after being read. 
-                    If you close this window or refresh the page, the encryption keys will be permanently destroyed and this chat will be lost forever.
-                </p>
-            </div>
+            {/* Body */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
+                <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 flex items-start gap-3 shadow-sm">
+                    <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
+                    <p>
+                        This chat is completely end-to-end encrypted. Messages self-destruct 1 minute after reading. <strong>Refreshing or leaving the page permanently wipes the keys and destroys this chat.</strong>
+                    </p>
+                </div>
 
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                {messages.length === 0 && (
-                    <div className="h-full flex items-center justify-center text-slate-500 text-sm">
-                        No messages yet. Send a secure message to start.
-                    </div>
-                )}
-                {messages.map((msg, idx) => {
-                    const isOwn = msg.senderId === 'me';
-                    
-                    // calculate time left if expiresAt is set
-                    let timeLeft = '';
-                    if (msg.expiresAt) {
-                        const msLeft = new Date(msg.expiresAt).getTime() - Date.now();
-                        if (msLeft > 0) {
-                            timeLeft = `${Math.ceil(msLeft / 1000)}s`;
-                        } else {
-                            timeLeft = '0s';
+                <div className="space-y-4">
+                    {messages.length === 0 && (
+                        <div className="flex items-center justify-center py-10 text-[color:var(--app-muted)] text-sm">
+                            Ready. Say something safely.
+                        </div>
+                    )}
+                    {messages.map((msg, idx) => {
+                        const isOwn = msg.senderId === 'me';
+                        
+                        let timeLeft = '';
+                        if (msg.expiresAt) {
+                            const msLeft = new Date(msg.expiresAt).getTime() - Date.now();
+                            if (msLeft > 0) {
+                                timeLeft = `${Math.ceil(msLeft / 1000)}s`;
+                            } else {
+                                timeLeft = '0s';
+                            }
                         }
-                    }
 
-                    return (
-                        <div key={msg._id || idx} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[75%] rounded-2xl p-3 ${isOwn ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-slate-800 text-slate-100 rounded-bl-none border border-slate-700'}`}>
-                                <p className="whitespace-pre-wrap text-[15px]">{msg.content}</p>
-                                <div className={`flex items-center justify-end gap-2 mt-1 text-[11px] ${isOwn ? 'text-emerald-200' : 'text-slate-400'}`}>
-                                    {timeLeft && <span className="flex items-center gap-1"><Lock className="w-3 h-3"/> {timeLeft}</span>}
-                                    <span>{formatTime(msg.sentAt)}</span>
-                                    {isOwn && (
-                                        <span>
-                                            {msg.deliveryStatus === 'read' ? '••' : msg.deliveryStatus === 'delivered' ? '✓✓' : '✓'}
-                                        </span>
-                                    )}
+                        return (
+                            <div key={msg._id || idx} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`group max-w-[600px] break-words whitespace-pre-wrap app-bubble ${isOwn ? 'app-bubble-own' : 'app-bubble-other'}`}>
+                                    <p className="text-[15px]">{msg.content}</p>
+                                    <div className="flex items-center justify-end gap-1.5 mt-1 text-[11px] opacity-70">
+                                        {timeLeft && (
+                                            <span className="flex items-center gap-1 font-medium bg-[color:var(--app-text)] text-[color:var(--app-surface)] px-1 rounded">
+                                                <Lock className="w-3 h-3" /> {timeLeft}
+                                            </span>
+                                        )}
+                                        <span>{formatTime(msg.sentAt)}</span>
+                                        {isOwn && (
+                                            <span>
+                                                {msg.deliveryStatus === 'read' ? '••' : msg.deliveryStatus === 'delivered' ? '✓✓' : '✓'}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    );
-                })}
-                <div ref={messagesEndRef} />
+                        );
+                    })}
+                    <div ref={messagesEndRef} />
+                </div>
             </div>
 
-            {/* Input Area */}
-            <div className="p-4 bg-slate-800 border-t border-slate-700">
-                <form onSubmit={handleSend} className="flex gap-2">
+            {/* Input matching app style */}
+            <footer className="px-6 py-4 border-t app-border shrink-0">
+                <form onSubmit={handleSend} className="relative flex items-center">
                     <input 
-                        type="text" 
+                        type="text"
                         value={input}
-                        onChange={(e) => setInput(e.target.value)}
+                        onChange={e => setInput(e.target.value)}
                         placeholder="Type a secure message..."
-                        className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition text-slate-100 placeholder:text-slate-500"
+                        className="w-full rounded-full border app-border bg-[color:var(--app-surface-elev)] pl-4 pr-14 py-3 text-[15px] text-[color:var(--app-text)] placeholder:text-[color:var(--app-muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--app-ring)] shadow-sm"
                     />
-                    <button 
-                        type="submit"
-                        disabled={!input.trim()}
-                        className="bg-emerald-600 text-white p-3 rounded-xl hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center shrink-0 w-12 h-12"
-                    >
-                        <Send className="w-5 h-5" />
-                    </button>
+                    <div className="absolute right-2 flex items-center">
+                        <button
+                            type="submit"
+                            disabled={!input.trim()}
+                            className="w-9 h-9 rounded-full bg-emerald-600 text-white flex items-center justify-center hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                        >
+                            <Send className="w-4 h-4 ml-0.5" />
+                        </button>
+                    </div>
                 </form>
-            </div>
+            </footer>
         </div>
     );
 };
