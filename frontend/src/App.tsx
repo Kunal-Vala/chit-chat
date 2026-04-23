@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Link, Navigate, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
-import { MessageCircle, Search, Users, UserCircle, LogOut, Moon, Sun, Sparkles, Menu } from "lucide-react";
+import { MessageCircle, Search, Users, UserCircle, Moon, Sun, Sparkles, Menu } from "lucide-react";
 import Register from "./pages/Register";
 import Sign_In from "./pages/Sign_In";
 import Profile from "./pages/Profile";
@@ -11,7 +11,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 function AppShell() {
-    const { user, isAuthenticated, logout } = useAuth()
+    const { user, isAuthenticated } = useAuth()
     const location = useLocation()
     const navigate = useNavigate()
     const isChatPage = location.pathname.startsWith('/chat')
