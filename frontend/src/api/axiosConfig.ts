@@ -101,10 +101,13 @@ apiClient.interceptors.response.use(
 	(error: AxiosError) => {
 		if (error.response?.status === 401) {
 			// Auth expired/invalidated. Trigger global logout if provided.
-			try {
-				handlers.onLogout?.()
-			} catch {
-				// noop
+			// Prevent infinite loops if the request was naturally unauthenticated (like login) or the logout endpoint itself returns 401.
+			if (error.config?.url !== '/auth/logout' && error.config?.url !== '/auth/sign_in') {
+				try {
+					handlers.onLogout?.()
+				} catch {
+					// noop
+				}
 			}
 		}
 		return Promise.reject(error)
