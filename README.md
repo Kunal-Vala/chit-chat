@@ -13,16 +13,13 @@ A full-stack, hyper-minimalist real-time messaging platform prioritizing seamles
 
 ## 📋 Table of Contents
 
-- [Overview](#overview)
-- [Tech Stack](#tech-stack)
-- [Project Architecture](#project-architecture)
-- [Database Schema](#database-schema)
-- [API Endpoints](#api-endpoints)
-- [Workflows](#workflows)
-- [Setup & Installation](#setup--installation)
-- [Running Locally](#running-locally)
-- [Deployment](#deployment)
-- [Testing](#testing)
+- [Overview](#-overview)
+- [Tech Stack](#-tech-stack)
+- [Project Architecture](#-project-architecture)
+- [Database Schema](#-database-schema)
+- [API Endpoints](#-api-endpoints)
+- [Workflows](#-workflows)
+- [Running Locally](#-running-locally)
 
 ---
 
